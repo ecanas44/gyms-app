@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { type ReactNode, useMemo, useState } from "react";
 
 type TabKey = "dashboard" | "members" | "classes" | "waivers" | "profile";
@@ -202,13 +203,13 @@ const tabs: Tab[] = [
   },
 ];
 
-const drawerLinks = [
-  "Overview",
-  "Bookings",
-  "Trainers",
-  "Payments",
-  "Waivers",
-  "Settings",
+const drawerLinks: { label: string; href?: string }[] = [
+  { label: "Overview", href: "/" },
+  { label: "Bookings" },
+  { label: "Trainers" },
+  { label: "Payments" },
+  { label: "Waivers", href: "/waivers" },
+  { label: "Settings" },
 ];
 
 export default function Home() {
@@ -312,15 +313,28 @@ export default function Home() {
         </div>
 
         <div className="mt-8 space-y-1">
-          {drawerLinks.map((item) => (
-            <button
-              key={item}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm font-medium text-slate-200 transition hover:bg-slate-800/80"
-            >
-              <span>{item}</span>
-              <span className="text-xs text-slate-400">›</span>
-            </button>
-          ))}
+          {drawerLinks.map((item) =>
+            item.href ? (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => setDrawerOpen(false)}
+                className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm font-medium text-slate-200 transition hover:bg-slate-800/80"
+              >
+                <span>{item.label}</span>
+                <span className="text-xs text-slate-400">›</span>
+              </Link>
+            ) : (
+              <button
+                key={item.label}
+                className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm font-medium text-slate-200 transition hover:bg-slate-800/80"
+                onClick={() => setDrawerOpen(false)}
+              >
+                <span>{item.label}</span>
+                <span className="text-xs text-slate-400">›</span>
+              </button>
+            ),
+          )}
         </div>
 
         <div className="mt-10 rounded-xl border border-slate-800 bg-slate-900/60 p-4">

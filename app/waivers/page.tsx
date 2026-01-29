@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type WaiverStatus = "Signed" | "Pending" | "Expired";
@@ -54,6 +55,15 @@ const seedWaivers: Waiver[] = [
     signedAt: "2024-07-02",
     status: "Pending",
   },
+];
+
+const drawerLinks: { label: string; href?: string }[] = [
+  { label: "Overview", href: "/" },
+  { label: "Bookings" },
+  { label: "Trainers" },
+  { label: "Payments" },
+  { label: "Waivers", href: "/waivers" },
+  { label: "Settings" },
 ];
 
 export default function WaiversPage() {
@@ -150,13 +160,24 @@ export default function WaiversPage() {
           </button>
         </div>
         <div className="mt-8 space-y-1">
-          {["Overview", "Bookings", "Trainers", "Payments", "Waivers", "Settings"].map(
-            (item) => (
-              <button
-                key={item}
+          {drawerLinks.map((item) =>
+            item.href ? (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => setDrawerOpen(false)}
                 className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm font-medium text-slate-200 transition hover:bg-slate-800/80"
               >
-                <span>{item}</span>
+                <span>{item.label}</span>
+                <span className="text-xs text-slate-400">›</span>
+              </Link>
+            ) : (
+              <button
+                key={item.label}
+                className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-sm font-medium text-slate-200 transition hover:bg-slate-800/80"
+                onClick={() => setDrawerOpen(false)}
+              >
+                <span>{item.label}</span>
                 <span className="text-xs text-slate-400">›</span>
               </button>
             ),
