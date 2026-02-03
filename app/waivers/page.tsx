@@ -1,17 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-
-type WaiverStatus = "Signed" | "Pending" | "Expired";
-
-type Waiver = {
-  id: string;
-  member: string;
-  email: string;
-  signedAt: string;
-  status: WaiverStatus;
-};
+import { useEffect, useMemo, useState } from "react";
+import {
+  Waiver,
+  WaiverStatus,
+  createWaiver,
+  deleteWaiver as deleteWaiverApi,
+  fetchWaivers,
+  updateWaiver as updateWaiverApi,
+} from "../../services/waivers";
+import { createCheckin } from "../../services/checkins";
 
 const statusStyles: Record<WaiverStatus, string> = {
   Signed: "bg-emerald-500/20 text-emerald-100",
@@ -19,72 +18,51 @@ const statusStyles: Record<WaiverStatus, string> = {
   Expired: "bg-rose-500/20 text-rose-100",
 };
 
-const seedWaivers: Waiver[] = [
-  {
-    id: "W-001",
-    member: "María Ortega",
-    email: "maria.ortega@email.com",
-    signedAt: "2024-06-18",
-    status: "Signed",
-  },
-  {
-    id: "W-002",
-    member: "James Miller",
-    email: "james.miller@email.com",
-    signedAt: "2024-06-30",
-    status: "Pending",
-  },
-  {
-    id: "W-003",
-    member: "Sofía Díaz",
-    email: "sofia.diaz@email.com",
-    signedAt: "2024-07-01",
-    status: "Signed",
-  },
-  {
-    id: "W-004",
-    member: "Aiden Chen",
-    email: "aiden.chen@email.com",
-    signedAt: "2024-05-12",
-    status: "Expired",
-  },
-  {
-    id: "W-005",
-    member: "Carlos Gómez",
-    email: "carlos.gomez@email.com",
-    signedAt: "2024-07-02",
-    status: "Pending",
-  },
-];
-
 const drawerLinks: { label: string; href?: string }[] = [
   { label: "Overview", href: "/" },
-  { label: "Bookings" },
-  { label: "Trainers" },
-  { label: "Payments" },
   { label: "Waivers", href: "/waivers" },
+  { label: "Members", href: "/members" },
+  { label: "Check-ins", href: "/checkins" },
   { label: "Settings" },
 ];
 
 export default function WaiversPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [waivers, setWaivers] = useState<Waiver[]>(seedWaivers);
+  const [waivers, setWaivers] = useState<Waiver[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [form, setForm] = useState<{
     id?: string;
-    member: string;
-    email: string;
-    signedAt: string;
+    code?: string;
+    member_name: string;
+    member_email: string;
+    signed_at: string;
     status: WaiverStatus;
   } | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchWaivers();
+        setWaivers(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load waivers");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const filteredWaivers = useMemo(() => {
     const term = search.toLowerCase();
     return waivers.filter(
       (w) =>
-        w.member.toLowerCase().includes(term) ||
-        w.email.toLowerCase().includes(term) ||
-        w.id.toLowerCase().includes(term),
+        w.member_name.toLowerCase().includes(term) ||
+        w.member_email.toLowerCase().includes(term) ||
+        w.code.toLowerCase().includes(term),
     );
   }, [search, waivers]);
 
@@ -100,37 +78,76 @@ export default function WaiversPage() {
 
   const startNewWaiver = () => {
     setForm({
-      member: "",
-      email: "",
-      signedAt: new Date().toISOString().slice(0, 10),
+      member_name: "",
+      member_email: "",
+      signed_at: new Date().toISOString().slice(0, 10),
       status: "Pending",
     });
   };
 
-  const editWaiver = (waiver: Waiver) => setForm({ ...waiver });
+  const editWaiver = (waiver: Waiver) =>
+    setForm({
+      id: waiver.id,
+      code: waiver.code,
+      member_name: waiver.member_name,
+      member_email: waiver.member_email,
+      signed_at: waiver.signed_at,
+      status: waiver.status,
+    });
 
   const saveWaiver = () => {
     if (!form) return;
-    const payload: Waiver = {
-      id: form.id ?? `W-${(waivers.length + 1).toString().padStart(3, "0")}`,
-      member: form.member.trim(),
-      email: form.email.trim(),
-      signedAt: form.signedAt,
+    const payload = {
+      code: form.code?.trim() || undefined,
+      member_name: form.member_name.trim(),
+      member_email: form.member_email.trim(),
+      signed_at: form.signed_at,
       status: form.status,
     };
-    setWaivers((prev) => {
-      const exists = prev.some((w) => w.id === payload.id);
-      if (exists) {
-        return prev.map((w) => (w.id === payload.id ? payload : w));
+
+    const performSave = async () => {
+      try {
+        setError(null);
+        if (form.id) {
+          const updated = await updateWaiverApi(form.id, payload);
+          setWaivers((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
+        } else {
+          const created = await createWaiver(payload);
+          setWaivers((prev) => [created, ...prev]);
+        }
+        setForm(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to save waiver");
       }
-      return [payload, ...prev];
-    });
-    setForm(null);
+    };
+
+    performSave();
   };
 
-  const deleteWaiver = (id: string) => {
-    setWaivers((prev) => prev.filter((w) => w.id !== id));
-    if (form?.id === id) setForm(null);
+const deleteWaiver = (id: string) => {
+    const performDelete = async () => {
+      try {
+        setError(null);
+        await deleteWaiverApi(id);
+        setWaivers((prev) => prev.filter((w) => w.id !== id));
+        if (form?.id === id) setForm(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete waiver");
+      }
+    };
+    performDelete();
+  };
+
+  const checkInFromWaiver = (waiver: Waiver) => {
+    const perform = async () => {
+      try {
+        setError(null);
+        await createCheckin({ waiver_id: waiver.id, member_id: null });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to create check-in");
+      }
+    };
+    perform();
   };
 
   return (
@@ -236,12 +253,17 @@ export default function WaiversPage() {
                   <h2 className="text-xl font-semibold text-white">
                     Intake and compliance
                   </h2>
+                  {error && (
+                    <p className="mt-1 text-xs text-rose-300">
+                      {error}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by name, email, or ID"
+                    placeholder="Search by name, email, or code"
                     className="w-full min-w-[240px] rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                   />
                   <button
@@ -279,31 +301,35 @@ export default function WaiversPage() {
               <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
                 <div className="grid grid-cols-5 bg-slate-900/70 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
                   <span>Member</span>
-                  <span>ID</span>
+                  <span>Code</span>
                   <span>Signed</span>
                   <span>Status</span>
                   <span className="text-right">Actions</span>
                 </div>
                 <div className="divide-y divide-slate-800">
-                  {filteredWaivers.map((waiver) => (
-                    <div
-                      key={waiver.id}
-                      className="grid grid-cols-5 items-center px-4 py-4 text-sm text-slate-100"
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-white">{waiver.member}</span>
-                        <span className="text-xs text-slate-400">{waiver.email}</span>
-                      </div>
-                      <span className="text-slate-300">{waiver.id}</span>
-                      <span className="text-slate-300">
-                        {new Date(waiver.signedAt).toLocaleDateString()}
-                      </span>
-                      <span
-                        className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[waiver.status]}`}
-                      >
-                        {waiver.status}
-                      </span>
-                      <div className="flex justify-end gap-2">
+                  {loading ? (
+                    <div className="px-4 py-6 text-sm text-slate-400">Loading waivers…</div>
+                  ) : (
+                    <>
+                      {filteredWaivers.map((waiver) => (
+                        <div
+                          key={waiver.id}
+                          className="grid grid-cols-5 items-center px-4 py-4 text-sm text-slate-100"
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-white">{waiver.member_name}</span>
+                            <span className="text-xs text-slate-400">{waiver.member_email}</span>
+                          </div>
+                          <span className="text-slate-300">{waiver.code}</span>
+                          <span className="text-slate-300">
+                            {new Date(waiver.signed_at).toLocaleDateString()}
+                          </span>
+                          <span
+                            className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[waiver.status]}`}
+                          >
+                            {waiver.status}
+                          </span>
+                          <div className="flex justify-end gap-2">
                         <button
                           className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-emerald-500/20"
                           onClick={() => editWaiver(waiver)}
@@ -316,13 +342,21 @@ export default function WaiversPage() {
                         >
                           Delete
                         </button>
+                        <button
+                          className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-500/30"
+                          onClick={() => checkInFromWaiver(waiver)}
+                        >
+                          Check-in
+                        </button>
                       </div>
                     </div>
                   ))}
-                  {filteredWaivers.length === 0 && (
-                    <div className="px-4 py-6 text-sm text-slate-400">
-                      No waivers match your search.
-                    </div>
+                      {filteredWaivers.length === 0 && (
+                        <div className="px-4 py-6 text-sm text-slate-400">
+                          No waivers match your search.
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -362,12 +396,25 @@ export default function WaiversPage() {
                 {form ? (
                   <div className="mt-4 space-y-3 text-sm text-slate-100">
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400">Member</label>
+                      <label className="text-xs text-slate-400">Code (optional)</label>
                       <input
-                        value={form.member}
+                        value={form.code ?? ""}
                         onChange={(e) =>
                           setForm((prev) =>
-                            prev ? { ...prev, member: e.target.value } : prev,
+                            prev ? { ...prev, code: e.target.value } : prev,
+                          )
+                        }
+                        className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                        placeholder="W-ABC123"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-400">Member</label>
+                      <input
+                        value={form.member_name}
+                        onChange={(e) =>
+                          setForm((prev) =>
+                            prev ? { ...prev, member_name: e.target.value } : prev,
                           )
                         }
                         className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
@@ -377,10 +424,10 @@ export default function WaiversPage() {
                     <div className="space-y-1">
                       <label className="text-xs text-slate-400">Email</label>
                       <input
-                        value={form.email}
+                        value={form.member_email}
                         onChange={(e) =>
                           setForm((prev) =>
-                            prev ? { ...prev, email: e.target.value } : prev,
+                            prev ? { ...prev, member_email: e.target.value } : prev,
                           )
                         }
                         className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
@@ -392,10 +439,10 @@ export default function WaiversPage() {
                         <label className="text-xs text-slate-400">Signed date</label>
                         <input
                           type="date"
-                          value={form.signedAt}
+                          value={form.signed_at}
                           onChange={(e) =>
                             setForm((prev) =>
-                              prev ? { ...prev, signedAt: e.target.value } : prev,
+                              prev ? { ...prev, signed_at: e.target.value } : prev,
                             )
                           }
                           className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
@@ -424,7 +471,7 @@ export default function WaiversPage() {
                     </div>
                     <div className="flex items-center justify-between pt-2">
                       <span className="text-xs text-slate-400">
-                        ID {form.id ?? "(auto)"}
+                        Code {form.code ?? "(auto)"}
                       </span>
                       <button
                         className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40"
