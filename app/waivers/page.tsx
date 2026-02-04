@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "../providers";
 import {
   Waiver,
   WaiverStatus,
@@ -18,15 +19,8 @@ const statusStyles: Record<WaiverStatus, string> = {
   Expired: "bg-rose-500/20 text-rose-100",
 };
 
-const drawerLinks: { label: string; href?: string }[] = [
-  { label: "Overview", href: "/" },
-  { label: "Waivers", href: "/waivers" },
-  { label: "Members", href: "/members" },
-  { label: "Check-ins", href: "/checkins" },
-  { label: "Settings" },
-];
-
 export default function WaiversPage() {
+  const { t } = useI18n();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [waivers, setWaivers] = useState<Waiver[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +49,17 @@ export default function WaiversPage() {
     };
     load();
   }, []);
+
+  const drawerLinks: { label: string; href?: string }[] = useMemo(
+    () => [
+      { label: t("overview"), href: "/" },
+      { label: t("waivers"), href: "/waivers" },
+      { label: t("members"), href: "/members" },
+      { label: t("checkins"), href: "/checkins" },
+      { label: t("settings"), href: "/settings" },
+    ],
+    [t],
+  );
 
   const filteredWaivers = useMemo(() => {
     const term = search.toLowerCase();

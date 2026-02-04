@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/app/providers";
 import { fetchMembers } from "@/services/members";
 import { fetchWaivers } from "@/services/waivers";
 import { fetchCheckins } from "@/services/checkins";
@@ -15,15 +16,8 @@ const statusStyles: Record<Waiver["status"], string> = {
   Expired: "bg-rose-500/20 text-rose-100",
 };
 
-const drawerLinks: { label: string; href?: string }[] = [
-  { label: "Overview", href: "/" },
-  { label: "Waivers", href: "/waivers" },
-  { label: "Members", href: "/members" },
-  { label: "Check-ins", href: "/checkins" },
-  { label: "Settings" },
-];
-
 export default function OverviewPage() {
+  const { t } = useI18n();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [members, setMembers] = useState<MemberRecord[]>([]);
   const [waivers, setWaivers] = useState<Waiver[]>([]);
@@ -52,6 +46,17 @@ export default function OverviewPage() {
     load();
   }, []);
 
+  const drawerLinks: { label: string; href?: string }[] = useMemo(
+    () => [
+      { label: t("overview"), href: "/" },
+      { label: t("waivers"), href: "/waivers" },
+      { label: t("members"), href: "/members" },
+      { label: t("checkins"), href: "/checkins" },
+      { label: t("settings"), href: "/settings" },
+    ],
+    [t],
+  );
+
   const waiverStatusCounts = useMemo(
     () =>
       waivers.reduce(
@@ -65,9 +70,9 @@ export default function OverviewPage() {
   );
 
   const metrics = [
-    { label: "Active members", value: members.length.toString() },
-    { label: "Total waivers", value: waivers.length.toString() },
-    { label: "Check-ins (last 24h)", value: checkins.slice(0, 100).length.toString() },
+    { label: t("activeMembers"), value: members.length.toString() },
+    { label: t("totalWaivers"), value: waivers.length.toString() },
+    { label: t("checkins24h"), value: checkins.slice(0, 100).length.toString() },
   ];
 
   return (
@@ -138,10 +143,10 @@ export default function OverviewPage() {
               </button>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Overview
+                  {t("overview")}
                 </p>
                 <h1 className="text-xl font-semibold text-white sm:text-2xl">
-                  Live snapshot
+                  {t("liveSnapshot")}
                 </h1>
                 {error && <p className="mt-1 text-xs text-rose-300">{error}</p>}
               </div>
@@ -152,7 +157,7 @@ export default function OverviewPage() {
         <main className="flex-1 px-5 pb-16 pt-6 sm:px-8">
           {loading ? (
             <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
-              Loading live data…
+              {t("loadingData")}
             </div>
           ) : (
             <div className="grid gap-6 lg:grid-cols-3">
@@ -176,16 +181,16 @@ export default function OverviewPage() {
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-slate-400">Waivers</p>
+                      <p className="text-sm text-slate-400">{t("waivers")}</p>
                       <h2 className="text-xl font-semibold text-white">
-                        Status at a glance
+                        {t("statusAtGlance")}
                       </h2>
                     </div>
                     <Link
                       href="/waivers"
                       className="text-sm font-semibold text-emerald-300 underline"
                     >
-                      View waivers
+                      {t("viewWaivers")}
                     </Link>
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -195,7 +200,11 @@ export default function OverviewPage() {
                         className="rounded-xl border border-slate-800 bg-slate-800/40 p-4"
                       >
                         <p className="text-xs uppercase tracking-wide text-slate-400">
-                          {status}
+                          {status === "Signed"
+                            ? t("signed")
+                            : status === "Pending"
+                              ? t("pending")
+                              : t("expired")}
                         </p>
                         <div className="mt-2 flex items-end justify-between">
                           <p className="text-2xl font-semibold text-white">
@@ -204,7 +213,11 @@ export default function OverviewPage() {
                           <span
                             className={`rounded-full px-3 py-1 text-[11px] font-semibold ${statusStyles[status]}`}
                           >
-                            {status}
+                            {status === "Signed"
+                              ? t("signed")
+                              : status === "Pending"
+                                ? t("pending")
+                                : t("expired")}
                           </span>
                         </div>
                       </div>
@@ -212,10 +225,10 @@ export default function OverviewPage() {
                   </div>
                   <div className="mt-6 overflow-hidden rounded-xl border border-slate-800">
                     <div className="grid grid-cols-4 bg-slate-900/70 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                      <span>Member</span>
-                      <span>Code</span>
-                      <span>Signed</span>
-                      <span>Status</span>
+                      <span>{t("member")}</span>
+                      <span>{t("code")}</span>
+                      <span>{t("signedOn")}</span>
+                      <span>{t("statusAtGlance").split(" ")[0]}</span>
                     </div>
                     <div className="divide-y divide-slate-800">
                       {waivers.slice(0, 5).map((w) => (
@@ -240,7 +253,7 @@ export default function OverviewPage() {
                       ))}
                       {waivers.length === 0 && (
                         <div className="px-4 py-4 text-sm text-slate-400">
-                          No waivers yet.
+                          {t("noWaivers")}
                         </div>
                       )}
                     </div>
@@ -251,12 +264,12 @@ export default function OverviewPage() {
               <section className="space-y-4">
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-white">Recent check-ins</p>
+                    <p className="text-sm font-semibold text-white">{t("recentCheckins")}</p>
                     <Link
                       href="/checkins"
                       className="text-xs font-semibold text-emerald-300 underline"
                     >
-                      See all
+                      {t("seeAll")}
                     </Link>
                   </div>
                   <div className="mt-3 space-y-3">
@@ -277,25 +290,25 @@ export default function OverviewPage() {
                             </span>
                           </div>
                           <span className="text-xs text-slate-300">
-                            {c.source === "Member" ? "Member" : "One-day"}
+                            {c.source === "Member" ? t("sourceMember") : t("sourceOneDay")}
                           </span>
                         </div>
                       );
                     })}
                     {checkins.length === 0 && (
-                      <p className="text-xs text-slate-400">No check-ins yet.</p>
+                      <p className="text-xs text-slate-400">{t("noCheckins")}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-white">Members</p>
+                    <p className="text-sm font-semibold text-white">{t("members")}</p>
                     <Link
                       href="/members"
                       className="text-xs font-semibold text-emerald-300 underline"
                     >
-                      Open roster
+                      {t("openRoster")}
                     </Link>
                   </div>
                   <div className="mt-3 space-y-3">
@@ -320,7 +333,7 @@ export default function OverviewPage() {
                       </div>
                     ))}
                     {members.length === 0 && (
-                      <p className="text-xs text-slate-400">No members yet.</p>
+                      <p className="text-xs text-slate-400">{t("noMembers")}</p>
                     )}
                   </div>
                 </div>
