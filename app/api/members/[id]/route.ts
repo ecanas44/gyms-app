@@ -1,12 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { deleteMember, updateMember } from "../../../../lib/members";
 
-type RouteContext = { params: { id: string } };
-
-export async function PUT(request: Request, context: RouteContext) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const body = await request.json();
-    const data = await updateMember(context.params.id, {
+    const { id } = await context.params;
+    const data = await updateMember(id, {
       waiver_id: body.waiver_id,
       full_name: body.full_name,
       email: body.email,
@@ -22,9 +21,10 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    await deleteMember(context.params.id);
+    const { id } = await context.params;
+    await deleteMember(id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Failed to delete member", error);

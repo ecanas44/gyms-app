@@ -1,11 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { deleteCheckin } from "../../../../lib/checkins";
 
-type RouteContext = { params: { id: string } };
-
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    await deleteCheckin(context.params.id);
+    const { id } = await context.params;
+    await deleteCheckin(id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Failed to delete check-in", error);

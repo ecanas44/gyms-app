@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type Lang = "en" | "es";
 
@@ -116,22 +116,19 @@ const translations: Record<Lang, Record<string, string>> = {
 };
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = useState<Lang>("en");
-
-  useEffect(() => {
+  const [lang, setLang] = useState<Lang>(() => {
+    if (typeof window === "undefined") return "en";
     const saved = window.localStorage.getItem("app-lang") as Lang | null;
-    if (saved === "en" || saved === "es") {
-      setLang(saved);
-    }
-  }, []);
+    return saved === "en" || saved === "es" ? saved : "en";
+  });
 
   useEffect(() => {
     window.localStorage.setItem("app-lang", lang);
   }, [lang]);
 
-  const t = (key: string) => translations[lang][key] ?? key;
+  const t = useCallback((key: string) => translations[lang][key] ?? key, [lang]);
 
-  const value = useMemo(() => ({ lang, setLang, t }), [lang]);
+  const value = useMemo(() => ({ lang, setLang, t }), [lang, t]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
