@@ -1,4 +1,4 @@
-import { createBrowserClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
 const supabaseAnonKey =
@@ -9,7 +9,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabaseBrowser = supabaseUrl && supabaseAnonKey
-  ? createBrowserClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
 export type SupabaseBrowserClient = NonNullable<typeof supabaseBrowser>;

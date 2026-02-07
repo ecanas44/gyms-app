@@ -1,12 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { deleteWaiver, updateWaiver } from "../../../../lib/waivers";
 
-type RouteContext = { params: { id: string } };
+type RouteContext = { params: Promise<{ id: string }> };
 
-export async function PUT(request: Request, context: RouteContext) {
+export async function PUT(request: NextRequest, { params }: RouteContext) {
   try {
+    const { id } = await params;
     const body = await request.json();
-    const data = await updateWaiver(context.params.id, {
+    const data = await updateWaiver(id, {
       code: body.code,
       member_name: body.member_name,
       member_email: body.member_email,
@@ -20,9 +21,10 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(_request: NextRequest, { params }: RouteContext) {
   try {
-    await deleteWaiver(context.params.id);
+    const { id } = await params;
+    await deleteWaiver(id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Failed to delete waiver", error);
