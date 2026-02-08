@@ -27,7 +27,7 @@ export type MemberPayload = {
 
 const table = "members";
 const membershipSelect =
-  "*, membership_type:membership_types(id, name, price_monthly, is_active, created_at, updated_at)";
+  "*, membership_type:membership_types!members_membership_type_id_fkey(id, name, price_monthly, is_active, created_at, updated_at)";
 
 function ensureAdmin() {
   if (!supabaseAdmin) throw new Error("Supabase admin client not configured");
