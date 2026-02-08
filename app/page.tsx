@@ -329,7 +329,9 @@ export default function OverviewPage() {
                             <span className="text-xs text-slate-400">{m.email}</span>
                           </div>
                         </div>
-                        <span className="text-xs text-slate-300">{m.membership}</span>
+                        <span className="text-xs text-slate-300">
+                          {m.membership_type?.name ?? "—"}
+                        </span>
                       </div>
                     ))}
                     {members.length === 0 && (
