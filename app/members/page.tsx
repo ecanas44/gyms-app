@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   MemberRecord,
-  MembershipType,
 } from "../../lib/members";
 import {
   createMember,
@@ -15,11 +14,19 @@ import {
 import { fetchWaivers } from "../../services/waivers";
 import { Waiver } from "../../services/waivers";
 import { createCheckin } from "../../services/checkins";
+import { fetchMembershipTypes } from "../../services/membership-types";
+import type { MembershipTypeRecord } from "../../lib/membership-types";
 
-const membershipStyles: Record<MembershipType, string> = {
-  Monthly: "bg-emerald-500/20 text-emerald-100",
-  PunchCard: "bg-cyan-500/20 text-cyan-100",
-};
+function membershipBadge(name: string): string {
+  const normalized = name.toLowerCase();
+  if (normalized.includes("monthly")) return "bg-emerald-500/20 text-emerald-100";
+  if (normalized.includes("punch")) return "bg-cyan-500/20 text-cyan-100";
+  return "bg-slate-500/20 text-slate-100";
+}
+
+function isPunchCardLike(name: string | undefined): boolean {
+  return !!name && name.toLowerCase().includes("punch");
+}
 
 const drawerLinks: { label: string; href?: string }[] = [
   { label: "Overview", href: "/" },
@@ -33,6 +40,7 @@ export default function MembersPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [members, setMembers] = useState<MemberRecord[]>([]);
   const [waivers, setWaivers] = useState<Waiver[]>([]);
+  const [membershipTypes, setMembershipTypes] = useState<MembershipTypeRecord[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +50,7 @@ export default function MembersPage() {
     full_name: string;
     email: string;
     phone: string;
-    membership: MembershipType;
+    membership_type_id: string;
     start_date: string;
     punches_remaining: number | null;
   } | null>(null);
@@ -51,9 +59,14 @@ export default function MembersPage() {
     const load = async () => {
       try {
         setLoading(true);
-        const [memberData, waiverData] = await Promise.all([fetchMembers(), fetchWaivers()]);
+        const [memberData, waiverData, membershipTypeData] = await Promise.all([
+          fetchMembers(),
+          fetchWaivers(),
+          fetchMembershipTypes(),
+        ]);
         setMembers(memberData);
         setWaivers(waiverData);
+        setMembershipTypes(membershipTypeData);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load members");
       } finally {
@@ -69,19 +82,25 @@ export default function MembersPage() {
       (m) =>
         m.full_name.toLowerCase().includes(term) ||
         m.email.toLowerCase().includes(term) ||
-        m.membership.toLowerCase().includes(term),
+        (m.membership_type?.name ?? "").toLowerCase().includes(term),
     );
   }, [members, search]);
 
+  const selectableMembershipTypes = useMemo(
+    () => membershipTypes.filter((type) => type.is_active),
+    [membershipTypes],
+  );
+
   const startNew = () => {
+    const defaultTypeId = selectableMembershipTypes[0]?.id ?? membershipTypes[0]?.id ?? "";
     setForm({
       waiver_id: waivers[0]?.id ?? "",
       full_name: "",
       email: "",
       phone: "",
-      membership: "Monthly",
+      membership_type_id: defaultTypeId,
       start_date: new Date().toISOString().slice(0, 10),
-      punches_remaining: 5,
+      punches_remaining: null,
     });
   };
 
@@ -92,7 +111,7 @@ export default function MembersPage() {
       full_name: member.full_name,
       email: member.email,
       phone: member.phone ?? "",
-      membership: member.membership,
+      membership_type_id: member.membership_type_id,
       start_date: member.start_date,
       punches_remaining: member.punches_remaining ?? null,
     });
@@ -104,6 +123,10 @@ export default function MembersPage() {
       setError("A waiver is required before adding a member.");
       return;
     }
+    if (!form.membership_type_id) {
+      setError("A membership type is required before adding a member.");
+      return;
+    }
     try {
       setError(null);
       const payload = {
@@ -111,10 +134,9 @@ export default function MembersPage() {
         full_name: form.full_name.trim(),
         email: form.email.trim(),
         phone: form.phone.trim() || null,
-        membership: form.membership,
+        membership_type_id: form.membership_type_id,
         start_date: form.start_date,
-        punches_remaining:
-          form.membership === "PunchCard" ? form.punches_remaining ?? 5 : null,
+        punches_remaining: form.punches_remaining,
       };
       if (form.id) {
         const updated = await updateMember(form.id, payload);
@@ -290,10 +312,10 @@ export default function MembersPage() {
                             </div>
                             <span className="text-slate-300">{member.email}</span>
                             <span
-                              className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${membershipStyles[member.membership]}`}
+                              className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${membershipBadge(member.membership_type?.name ?? "Unknown")}`}
                             >
-                              {member.membership}
-                              {member.membership === "PunchCard" && member.punches_remaining != null
+                              {member.membership_type?.name ?? "Unknown"}
+                              {isPunchCardLike(member.membership_type?.name) && member.punches_remaining != null
                                 ? ` · ${member.punches_remaining} left`
                                 : ""}
                             </span>
@@ -409,18 +431,22 @@ export default function MembersPage() {
                       <div className="space-y-1">
                         <label className="text-xs text-slate-400">Type</label>
                         <select
-                          value={form.membership}
+                          value={form.membership_type_id}
                           onChange={(e) =>
                             setForm((prev) =>
                               prev
-                                ? { ...prev, membership: e.target.value as MembershipType }
+                                ? { ...prev, membership_type_id: e.target.value }
                                 : prev,
                             )
                           }
                           className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
                         >
-                          <option value="Monthly">Monthly</option>
-                          <option value="PunchCard">5 Punch Card</option>
+                          {membershipTypes.map((type) => (
+                            <option key={type.id} value={type.id}>
+                              {type.name}
+                              {!type.is_active ? " (Inactive)" : ""}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -438,7 +464,9 @@ export default function MembersPage() {
                           className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
                         />
                       </div>
-                      {form.membership === "PunchCard" && (
+                      {isPunchCardLike(
+                        membershipTypes.find((type) => type.id === form.membership_type_id)?.name,
+                      ) && (
                         <div className="space-y-1">
                           <label className="text-xs text-slate-400">Punches remaining</label>
                           <input
@@ -464,11 +492,16 @@ export default function MembersPage() {
                       <button
                         className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40"
                         onClick={saveMember}
-                        disabled={!form.waiver_id}
+                        disabled={!form.waiver_id || !form.membership_type_id}
                       >
                         {form.id ? "Update member" : "Save member"}
                       </button>
                     </div>
+                    {membershipTypes.length === 0 && (
+                      <p className="text-xs text-amber-300">
+                        Add a membership type in Settings before creating members.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="mt-4 space-y-3 text-sm text-slate-400">
@@ -476,13 +509,18 @@ export default function MembersPage() {
                     <button
                       className="rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-emerald-500/20"
                       onClick={startNew}
-                      disabled={waivers.length === 0}
+                      disabled={waivers.length === 0 || membershipTypes.length === 0}
                     >
                       New member
                     </button>
                     {waivers.length === 0 && (
                       <p className="text-xs text-amber-300">
                         Add a waiver first—members must be linked to a waiver.
+                      </p>
+                    )}
+                    {membershipTypes.length === 0 && (
+                      <p className="text-xs text-amber-300">
+                        Add a membership type first in Settings.
                       </p>
                     )}
                   </div>

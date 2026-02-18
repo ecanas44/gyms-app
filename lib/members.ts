@@ -1,6 +1,11 @@
 import { supabaseAdmin } from "./supabase/server";
 
-export type MembershipType = "Monthly" | "PunchCard";
+export type MemberMembershipType = {
+  id: string;
+  name: string;
+  price_monthly: number | null;
+  is_active: boolean;
+};
 
 export type MemberRecord = {
   id: string;
@@ -8,7 +13,8 @@ export type MemberRecord = {
   full_name: string;
   email: string;
   phone: string | null;
-  membership: MembershipType;
+  membership_type_id: string;
+  membership_type: MemberMembershipType | null;
   start_date: string;
   punches_remaining: number | null;
   created_at: string;
@@ -20,7 +26,7 @@ export type MemberPayload = {
   full_name: string;
   email: string;
   phone?: string | null;
-  membership: MembershipType;
+  membership_type_id: string;
   start_date: string;
   punches_remaining?: number | null;
 };
@@ -35,7 +41,9 @@ export async function listMembers(): Promise<MemberRecord[]> {
   ensureAdmin();
   const { data, error } = await supabaseAdmin!
     .from(table)
-    .select("*")
+    .select(
+      "*, membership_type:membership_types!members_membership_type_id_fkey(id, name, price_monthly, is_active)",
+    )
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as MemberRecord[];

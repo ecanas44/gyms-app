@@ -1,18 +1,63 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "../providers";
+import {
+  createMembershipType,
+  deleteMembershipType,
+  fetchMembershipTypes,
+  updateMembershipType,
+} from "../../services/membership-types";
+import type { MembershipTypeRecord } from "../../lib/membership-types";
 
 const PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const SERVICE_KEY_PLACEHOLDER = "Not available in client build";
+
+type MembershipDraft = {
+  name: string;
+  priceMonthly: string;
+  isActive: boolean;
+};
+
+function toPriceValue(value: string): number | null {
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error("Price must be a non-negative number");
+  }
+  return Number(parsed.toFixed(2));
+}
 
 export default function SettingsPage() {
   const { t, lang, setLang } = useI18n();
   const [theme, setTheme] = useState<"dark" | "dim">("dark");
   const [anonKeyVisible, setAnonKeyVisible] = useState(false);
   const [serviceKeyVisible, setServiceKeyVisible] = useState(false);
+
+  const [ownerKey, setOwnerKey] = useState("");
+  const [membershipTypes, setMembershipTypes] = useState<MembershipTypeRecord[]>([]);
+  const [membershipLoading, setMembershipLoading] = useState(true);
+  const [membershipError, setMembershipError] = useState<string | null>(null);
+  const [membershipBusyId, setMembershipBusyId] = useState<string | null>(null);
+  const [creatingMembership, setCreatingMembership] = useState(false);
+  const [newType, setNewType] = useState<MembershipDraft>({
+    name: "",
+    priceMonthly: "",
+    isActive: true,
+  });
+  const [drafts, setDrafts] = useState<Record<string, MembershipDraft>>({});
+
+  useEffect(() => {
+    const savedOwnerKey = window.localStorage.getItem("owner-settings-key");
+    if (savedOwnerKey) setOwnerKey(savedOwnerKey);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("owner-settings-key", ownerKey);
+  }, [ownerKey]);
 
   const supabaseUrl = PUBLIC_SUPABASE_URL || "Not set";
   const supabaseAnon = PUBLIC_SUPABASE_ANON_KEY || "Not set";
@@ -28,6 +73,104 @@ export default function SettingsPage() {
     { label: t("checkins"), href: "/checkins" },
     { label: t("settings"), href: "/settings" },
   ];
+
+  const syncDrafts = (items: MembershipTypeRecord[]) => {
+    setDrafts(
+      items.reduce<Record<string, MembershipDraft>>((acc, item) => {
+        acc[item.id] = {
+          name: item.name,
+          priceMonthly: item.price_monthly == null ? "" : String(item.price_monthly),
+          isActive: item.is_active,
+        };
+        return acc;
+      }, {}),
+    );
+  };
+
+  useEffect(() => {
+    const loadMembershipTypes = async () => {
+      try {
+        setMembershipLoading(true);
+        setMembershipError(null);
+        const data = await fetchMembershipTypes();
+        setMembershipTypes(data);
+        syncDrafts(data);
+      } catch (error) {
+        setMembershipError(error instanceof Error ? error.message : "Failed to load membership types");
+      } finally {
+        setMembershipLoading(false);
+      }
+    };
+
+    loadMembershipTypes();
+  }, []);
+
+  const createType = async () => {
+    try {
+      setCreatingMembership(true);
+      setMembershipError(null);
+      const created = await createMembershipType(
+        {
+          name: newType.name,
+          price_monthly: toPriceValue(newType.priceMonthly),
+          is_active: newType.isActive,
+        },
+        ownerKey.trim() || undefined,
+      );
+      const updated = [...membershipTypes, created].sort((a, b) => a.name.localeCompare(b.name));
+      setMembershipTypes(updated);
+      syncDrafts(updated);
+      setNewType({ name: "", priceMonthly: "", isActive: true });
+    } catch (error) {
+      setMembershipError(error instanceof Error ? error.message : "Failed to create membership type");
+    } finally {
+      setCreatingMembership(false);
+    }
+  };
+
+  const saveType = async (id: string) => {
+    const draft = drafts[id];
+    if (!draft) return;
+
+    try {
+      setMembershipBusyId(id);
+      setMembershipError(null);
+      const updatedItem = await updateMembershipType(
+        id,
+        {
+          name: draft.name,
+          price_monthly: toPriceValue(draft.priceMonthly),
+          is_active: draft.isActive,
+        },
+        ownerKey.trim() || undefined,
+      );
+      const updated = membershipTypes.map((item) => (item.id === id ? updatedItem : item));
+      setMembershipTypes(updated);
+      syncDrafts(updated);
+    } catch (error) {
+      setMembershipError(error instanceof Error ? error.message : "Failed to update membership type");
+    } finally {
+      setMembershipBusyId(null);
+    }
+  };
+
+  const removeType = async (item: MembershipTypeRecord) => {
+    const confirmed = window.confirm(`Delete membership type \"${item.name}\"?`);
+    if (!confirmed) return;
+
+    try {
+      setMembershipBusyId(item.id);
+      setMembershipError(null);
+      await deleteMembershipType(item.id, ownerKey.trim() || undefined);
+      const updated = membershipTypes.filter((type) => type.id !== item.id);
+      setMembershipTypes(updated);
+      syncDrafts(updated);
+    } catch (error) {
+      setMembershipError(error instanceof Error ? error.message : "Failed to delete membership type");
+    } finally {
+      setMembershipBusyId(null);
+    }
+  };
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-50">
@@ -114,6 +257,146 @@ export default function SettingsPage() {
                     </button>
                   </div>
                 </div>
+              </div>
+            </section>
+
+            <section className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-white">Membership types</p>
+                  <p className="text-xs text-slate-400">Owner-managed billing types</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                <p className="text-xs text-slate-400">Owner key (required only if `OWNER_SETTINGS_KEY` is set on the server)</p>
+                <input
+                  type="password"
+                  value={ownerKey}
+                  onChange={(event) => setOwnerKey(event.target.value)}
+                  placeholder="Owner key"
+                  className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">New membership type</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <input
+                    value={newType.name}
+                    onChange={(event) =>
+                      setNewType((prev) => ({ ...prev, name: event.target.value }))
+                    }
+                    placeholder="Name"
+                    className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                  />
+                  <input
+                    value={newType.priceMonthly}
+                    onChange={(event) =>
+                      setNewType((prev) => ({ ...prev, priceMonthly: event.target.value }))
+                    }
+                    placeholder="Monthly price (optional)"
+                    className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                  />
+                  <label className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100">
+                    <span>Active</span>
+                    <input
+                      type="checkbox"
+                      checked={newType.isActive}
+                      onChange={(event) =>
+                        setNewType((prev) => ({ ...prev, isActive: event.target.checked }))
+                      }
+                    />
+                  </label>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={createType}
+                    disabled={creatingMembership || !newType.name.trim()}
+                  >
+                    {creatingMembership ? "Saving..." : "Add type"}
+                  </button>
+                </div>
+              </div>
+
+              {membershipError && <p className="text-xs text-rose-300">{membershipError}</p>}
+
+              <div className="space-y-2">
+                {membershipLoading ? (
+                  <p className="text-sm text-slate-400">Loading membership types...</p>
+                ) : membershipTypes.length === 0 ? (
+                  <p className="text-sm text-slate-400">No membership types configured.</p>
+                ) : (
+                  membershipTypes.map((item) => {
+                    const draft = drafts[item.id];
+                    const busy = membershipBusyId === item.id;
+                    if (!draft) return null;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/70 p-3"
+                      >
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <input
+                            value={draft.name}
+                            onChange={(event) =>
+                              setDrafts((prev) => ({
+                                ...prev,
+                                [item.id]: { ...prev[item.id], name: event.target.value },
+                              }))
+                            }
+                            className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                          />
+                          <input
+                            value={draft.priceMonthly}
+                            onChange={(event) =>
+                              setDrafts((prev) => ({
+                                ...prev,
+                                [item.id]: { ...prev[item.id], priceMonthly: event.target.value },
+                              }))
+                            }
+                            placeholder="Monthly price"
+                            className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                          />
+                          <label className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100">
+                            <span>{draft.isActive ? "Active" : "Inactive"}</span>
+                            <input
+                              type="checkbox"
+                              checked={draft.isActive}
+                              onChange={(event) =>
+                                setDrafts((prev) => ({
+                                  ...prev,
+                                  [item.id]: { ...prev[item.id], isActive: event.target.checked },
+                                }))
+                              }
+                            />
+                          </label>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-slate-400">In use by {item.members_count ?? 0} member(s)</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                              onClick={() => saveType(item.id)}
+                              disabled={busy}
+                            >
+                              {busy ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                              onClick={() => removeType(item)}
+                              disabled={busy}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </section>
 

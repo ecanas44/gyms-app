@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       full_name: body.full_name,
       email: body.email,
       phone: body.phone ?? null,
-      membership: body.membership,
+      membership_type_id: body.membership_type_id,
       start_date: body.start_date,
       punches_remaining: body.punches_remaining ?? null,
     });

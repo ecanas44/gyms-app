@@ -1,11 +1,11 @@
-import { MembershipType, MemberRecord } from "../lib/members";
+import { MemberRecord } from "../lib/members";
 
 export type MemberInput = {
   waiver_id: string;
   full_name: string;
   email: string;
   phone?: string | null;
-  membership: MembershipType;
+  membership_type_id: string;
   start_date: string;
   punches_remaining?: number | null;
 };
