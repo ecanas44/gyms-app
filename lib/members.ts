@@ -32,6 +32,8 @@ export type MemberPayload = {
 };
 
 const table = "members";
+const memberSelect =
+  "*, membership_type:membership_types!members_membership_type_id_fkey(id, name, price_monthly, is_active)";
 
 function ensureAdmin() {
   if (!supabaseAdmin) throw new Error("Supabase admin client not configured");
@@ -41,9 +43,7 @@ export async function listMembers(): Promise<MemberRecord[]> {
   ensureAdmin();
   const { data, error } = await supabaseAdmin!
     .from(table)
-    .select(
-      "*, membership_type:membership_types!members_membership_type_id_fkey(id, name, price_monthly, is_active)",
-    )
+    .select(memberSelect)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as MemberRecord[];
@@ -51,14 +51,19 @@ export async function listMembers(): Promise<MemberRecord[]> {
 
 export async function createMember(payload: MemberPayload): Promise<MemberRecord> {
   ensureAdmin();
-  const { data, error } = await supabaseAdmin!.from(table).insert(payload).select().single();
+  const { data, error } = await supabaseAdmin!.from(table).insert(payload).select(memberSelect).single();
   if (error) throw error;
   return data as MemberRecord;
 }
 
 export async function updateMember(id: string, payload: Partial<MemberPayload>): Promise<MemberRecord> {
   ensureAdmin();
-  const { data, error } = await supabaseAdmin!.from(table).update(payload).eq("id", id).select().single();
+  const { data, error } = await supabaseAdmin!
+    .from(table)
+    .update(payload)
+    .eq("id", id)
+    .select(memberSelect)
+    .single();
   if (error) throw error;
   return data as MemberRecord;
 }
