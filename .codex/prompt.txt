@@ -1,0 +1,50 @@
+You are Codex operating on the target repository for UtilRack.
+
+Resolve the engineering ticket end-to-end.
+
+Ticket ID: ea293f68-ea03-4ce3-81a9-f3ebc55dfc28
+Title: Hacer funcionar el setting de elegir apariencia
+Description: En la seccion de settings, hay para elegir dos apriencias del app, Dark y Dim, pero estos dos botones no se hacen nada si se presionan.
+Client: Internal
+Project: Internal CRM
+Target repository: ecanas44/gyms-app
+Base branch: main
+
+Required business/development context:
+Objetivo de negocio:
+Hacer funcionar el setting de elegir apariencia
+
+Contexto:
+- Repositorio objetivo: ecanas44/gyms-app
+- Descripción breve: En la seccion de settings, hay para elegir dos apriencias del app, Dark y Dim, pero estos dos botones no se hacen nada si se presionan.
+- Resumen hablado:
+Crea 2 temas diferentes, uno oscuro y uno claro, para que los botones en la seccion de apariencia en settings funcionen y cambien el estilo del app.
+
+Cambio solicitado:
+- Convertir el resumen hablado en una implementación concreta dentro del repositorio objetivo.
+
+Criterios de aceptación:
+1. El cambio pedido en el resumen hablado queda implementado.
+2. No se alteran áreas no mencionadas.
+3. El resultado se puede validar manualmente.
+
+Restricciones:
+- Mantener los cambios acotados al objetivo descrito.
+- Confirmar compatibilidad con el stack actual del repositorio.
+
+Datos / dependencias:
+- Revisar componentes, rutas, modelos o servicios mencionados en el resumen hablado.
+
+Validación requerida:
+- Ejecutar build y pruebas relevantes si existen.
+
+Definición de terminado:
+- El ticket queda resuelto y listo para revisión humana.
+
+Execution requirements:
+- Work only in the target repository checked out for this run.
+- Make the minimum safe code changes needed.
+- Run relevant verification when possible.
+- If you change files, commit them with a clear commit message.
+- Do not ask for interactive input.
+- Write a concise final summary including what changed, test results, and any residual risk.

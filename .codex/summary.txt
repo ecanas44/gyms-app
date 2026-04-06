@@ -1,0 +1,26 @@
+Implementación completada para que el setting de apariencia funcione de forma global con dos temas (`dark` y `dim`), manteniendo cambios acotados al objetivo.
+
+Cambios realizados:
+- Conecté la preferencia de apariencia a nivel app (ya no estado local solo en Settings).
+- Agregué `ThemeProvider` con persistencia en `localStorage` (`app-theme`) y aplicación en `document.documentElement.dataset.theme`.
+- Envolví la app con `ThemeProvider` en layout.
+- Actualicé Settings para usar `useTheme()` y quitar el texto que decía que el toggle era solo local.
+- Definí estilos globales para `dark` y `dim` en CSS, incluyendo overrides de paleta `slate` para que el cambio visual impacte las pantallas existentes que usan clases `slate-*`.
+
+Archivos modificados:
+- [app/providers.tsx](/home/runner/work/UtilRack-CRM-AI/UtilRack-CRM-AI/target-repo/app/providers.tsx)
+- [app/layout.tsx](/home/runner/work/UtilRack-CRM-AI/UtilRack-CRM-AI/target-repo/app/layout.tsx)
+- [app/settings/page.tsx](/home/runner/work/UtilRack-CRM-AI/UtilRack-CRM-AI/target-repo/app/settings/page.tsx)
+- [app/globals.css](/home/runner/work/UtilRack-CRM-AI/UtilRack-CRM-AI/target-repo/app/globals.css)
+
+Validación ejecutada:
+- `npm run build` (falló por entorno sin dependencias: `next: not found`)
+- `npm ci` (falló por error de npm del entorno: `Exit handler never called!`)
+- `npm run lint` (falló por dependencias no instaladas: `eslint: not found`)
+
+Commit:
+- No fue posible crear commit por restricción del entorno sobre `.git`:
+  - `fatal: Unable to create '.git/index.lock': Read-only file system`
+
+Riesgo residual:
+- Bajo/medio: no pude ejecutar build/lint en este entorno por restricciones de instalación/FS, pero el cambio es focalizado y coherente con Next/React actual del repo.  
