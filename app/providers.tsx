@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type Lang = "en" | "es";
+export type AppTheme = "dark" | "dim";
 
 type I18nContextValue = {
   lang: Lang;
@@ -11,6 +12,13 @@ type I18nContextValue = {
 };
 
 const I18nContext = createContext<I18nContextValue | undefined>(undefined);
+const ThemeContext = createContext<
+  | {
+      theme: AppTheme;
+      setTheme: (theme: AppTheme) => void;
+    }
+  | undefined
+>(undefined);
 
 const translations: Record<Lang, Record<string, string>> = {
   en: {
@@ -133,8 +141,31 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setTheme] = useState<AppTheme>(() => {
+    if (typeof window === "undefined") return "dark";
+    const saved = window.localStorage.getItem("app-theme") as AppTheme | null;
+    return saved === "dark" || saved === "dim" ? saved : "dark";
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem("app-theme", theme);
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  const value = useMemo(() => ({ theme, setTheme }), [theme]);
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
 export function useI18n() {
   const ctx = useContext(I18nContext);
   if (!ctx) throw new Error("useI18n must be used within LanguageProvider");
+  return ctx;
+}
+
+export function useTheme() {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
   return ctx;
 }

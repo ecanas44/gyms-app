@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useI18n } from "../providers";
+import { useI18n, useTheme } from "../providers";
 import {
   createMembershipType,
   deleteMembershipType,
@@ -33,7 +33,7 @@ function toPriceValue(value: string): number | null {
 
 export default function SettingsPage() {
   const { t, lang, setLang } = useI18n();
-  const [theme, setTheme] = useState<"dark" | "dim">("dark");
+  const { theme, setTheme } = useTheme();
   const [anonKeyVisible, setAnonKeyVisible] = useState(false);
   const [serviceKeyVisible, setServiceKeyVisible] = useState(false);
 
@@ -422,9 +422,6 @@ export default function SettingsPage() {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-slate-400">
-                (Theme toggle is local only; hook into app-wide theme when ready.)
-              </p>
             </section>
 
             <section className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
