@@ -100,8 +100,19 @@ export async function listMembers(): Promise<MemberRecord[]> {
     .from(table)
     .select(memberSelect)
     .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data as MemberRecord[];
+  if (!error) return data as MemberRecord[];
+
+  // Fallback for environments where the FK embed cannot be resolved yet.
+  const { data: fallbackData, error: fallbackError } = await supabaseAdmin!
+    .from(table)
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (fallbackError) throw error;
+
+  return (fallbackData as Omit<MemberRecord, "membership_type">[]).map((member) => ({
+    ...member,
+    membership_type: null,
+  }));
 }
 
 export async function createMember(payload: MemberPayload): Promise<MemberRecord> {
