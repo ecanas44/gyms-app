@@ -17,7 +17,8 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     return NextResponse.json(data);
   } catch (error) {
     console.error("Failed to update member", error);
-    return NextResponse.json({ error: "Failed to update member" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to update member";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -28,6 +29,7 @@ export async function DELETE(_request: NextRequest, context: { params: Promise<{
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Failed to delete member", error);
-    return NextResponse.json({ error: "Failed to delete member" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to delete member";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

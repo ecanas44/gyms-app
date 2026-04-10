@@ -7,7 +7,8 @@ export async function GET() {
     return NextResponse.json(data);
   } catch (error) {
     console.error("Failed to fetch members", error);
-    return NextResponse.json({ error: "Failed to fetch members" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to fetch members";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error("Failed to create member", error);
-    return NextResponse.json({ error: "Failed to create member" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to create member";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
