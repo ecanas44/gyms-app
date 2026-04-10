@@ -13,7 +13,6 @@ import type { MembershipTypeRecord } from "../../lib/membership-types";
 
 const PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-const SERVICE_KEY_PLACEHOLDER = "Not available in client build";
 
 type MembershipDraft = {
   name: string;
@@ -21,12 +20,12 @@ type MembershipDraft = {
   isActive: boolean;
 };
 
-function toPriceValue(value: string): number | null {
+function toPriceValue(value: string, invalidPriceMessage: string): number | null {
   const normalized = value.trim();
   if (!normalized) return null;
   const parsed = Number(normalized);
   if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error("Price must be a non-negative number");
+    throw new Error(invalidPriceMessage);
   }
   return Number(parsed.toFixed(2));
 }
@@ -53,18 +52,18 @@ export default function SettingsPage() {
   useEffect(() => {
     const savedOwnerKey = window.localStorage.getItem("owner-settings-key");
     if (savedOwnerKey) setOwnerKey(savedOwnerKey);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     window.localStorage.setItem("owner-settings-key", ownerKey);
   }, [ownerKey]);
 
-  const supabaseUrl = PUBLIC_SUPABASE_URL || "Not set";
-  const supabaseAnon = PUBLIC_SUPABASE_ANON_KEY || "Not set";
-  const supabaseService = SERVICE_KEY_PLACEHOLDER;
+  const supabaseUrl = PUBLIC_SUPABASE_URL || t("notSet");
+  const supabaseAnon = PUBLIC_SUPABASE_ANON_KEY || t("notSet");
+  const supabaseService = t("notAvailableClient");
 
   const displayKey = (key: string, visible: boolean) =>
-    visible ? key : key === "Not set" ? key : key.slice(0, 4) + "••••••••" + key.slice(-4);
+    visible ? key : key === t("notSet") ? key : key.slice(0, 4) + "••••••••" + key.slice(-4);
 
   const drawerLinks: { label: string; href?: string }[] = [
     { label: t("overview"), href: "/" },
@@ -96,14 +95,14 @@ export default function SettingsPage() {
         setMembershipTypes(data);
         syncDrafts(data);
       } catch (error) {
-        setMembershipError(error instanceof Error ? error.message : "Failed to load membership types");
+        setMembershipError(error instanceof Error ? error.message : t("failedLoadMembershipTypes"));
       } finally {
         setMembershipLoading(false);
       }
     };
 
     loadMembershipTypes();
-  }, []);
+  }, [t]);
 
   const createType = async () => {
     try {
@@ -112,7 +111,7 @@ export default function SettingsPage() {
       const created = await createMembershipType(
         {
           name: newType.name,
-          price_monthly: toPriceValue(newType.priceMonthly),
+          price_monthly: toPriceValue(newType.priceMonthly, t("priceMustBeNonNegative")),
           is_active: newType.isActive,
         },
         ownerKey.trim() || undefined,
@@ -122,7 +121,7 @@ export default function SettingsPage() {
       syncDrafts(updated);
       setNewType({ name: "", priceMonthly: "", isActive: true });
     } catch (error) {
-      setMembershipError(error instanceof Error ? error.message : "Failed to create membership type");
+      setMembershipError(error instanceof Error ? error.message : t("failedCreateMembershipType"));
     } finally {
       setCreatingMembership(false);
     }
@@ -139,7 +138,7 @@ export default function SettingsPage() {
         id,
         {
           name: draft.name,
-          price_monthly: toPriceValue(draft.priceMonthly),
+          price_monthly: toPriceValue(draft.priceMonthly, t("priceMustBeNonNegative")),
           is_active: draft.isActive,
         },
         ownerKey.trim() || undefined,
@@ -148,14 +147,14 @@ export default function SettingsPage() {
       setMembershipTypes(updated);
       syncDrafts(updated);
     } catch (error) {
-      setMembershipError(error instanceof Error ? error.message : "Failed to update membership type");
+      setMembershipError(error instanceof Error ? error.message : t("failedUpdateMembershipType"));
     } finally {
       setMembershipBusyId(null);
     }
   };
 
   const removeType = async (item: MembershipTypeRecord) => {
-    const confirmed = window.confirm(`Delete membership type \"${item.name}\"?`);
+    const confirmed = window.confirm(t("deleteMembershipTypeConfirm").replace("{name}", item.name));
     if (!confirmed) return;
 
     try {
@@ -166,7 +165,7 @@ export default function SettingsPage() {
       setMembershipTypes(updated);
       syncDrafts(updated);
     } catch (error) {
-      setMembershipError(error instanceof Error ? error.message : "Failed to delete membership type");
+      setMembershipError(error instanceof Error ? error.message : t("failedDeleteMembershipType"));
     } finally {
       setMembershipBusyId(null);
     }
@@ -219,7 +218,7 @@ export default function SettingsPage() {
                   <p className="text-xs text-slate-400">{t("projectCredentials")}</p>
                 </div>
                 <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-100">
-                  Read-only
+                  {t("readOnly")}
                 </span>
               </div>
               <div className="space-y-3 text-sm text-slate-100">
@@ -263,31 +262,31 @@ export default function SettingsPage() {
             <section className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-white">Membership types</p>
-                  <p className="text-xs text-slate-400">Owner-managed billing types</p>
+                  <p className="text-sm font-semibold text-white">{t("membershipTypes")}</p>
+                  <p className="text-xs text-slate-400">{t("ownerManagedBillingTypes")}</p>
                 </div>
               </div>
 
               <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-                <p className="text-xs text-slate-400">Owner key (required only if `OWNER_SETTINGS_KEY` is set on the server)</p>
+                <p className="text-xs text-slate-400">{t("ownerKeyRequiredIfConfigured")}</p>
                 <input
                   type="password"
                   value={ownerKey}
                   onChange={(event) => setOwnerKey(event.target.value)}
-                  placeholder="Owner key"
+                  placeholder={t("ownerKey")}
                   className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                 />
               </div>
 
               <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">New membership type</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">{t("newMembershipType")}</p>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <input
                     value={newType.name}
                     onChange={(event) =>
                       setNewType((prev) => ({ ...prev, name: event.target.value }))
                     }
-                    placeholder="Name"
+                    placeholder={t("name")}
                     className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                   />
                   <input
@@ -295,11 +294,11 @@ export default function SettingsPage() {
                     onChange={(event) =>
                       setNewType((prev) => ({ ...prev, priceMonthly: event.target.value }))
                     }
-                    placeholder="Monthly price (optional)"
+                    placeholder={t("monthlyPriceOptional")}
                     className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                   />
                   <label className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100">
-                    <span>Active</span>
+                    <span>{t("active")}</span>
                     <input
                       type="checkbox"
                       checked={newType.isActive}
@@ -315,7 +314,7 @@ export default function SettingsPage() {
                     onClick={createType}
                     disabled={creatingMembership || !newType.name.trim()}
                   >
-                    {creatingMembership ? "Saving..." : "Add type"}
+                    {creatingMembership ? t("saving") : t("addType")}
                   </button>
                 </div>
               </div>
@@ -324,9 +323,9 @@ export default function SettingsPage() {
 
               <div className="space-y-2">
                 {membershipLoading ? (
-                  <p className="text-sm text-slate-400">Loading membership types...</p>
+                  <p className="text-sm text-slate-400">{t("loadingMembershipTypes")}</p>
                 ) : membershipTypes.length === 0 ? (
-                  <p className="text-sm text-slate-400">No membership types configured.</p>
+                  <p className="text-sm text-slate-400">{t("noMembershipTypesConfigured")}</p>
                 ) : (
                   membershipTypes.map((item) => {
                     const draft = drafts[item.id];
@@ -357,11 +356,11 @@ export default function SettingsPage() {
                                 [item.id]: { ...prev[item.id], priceMonthly: event.target.value },
                               }))
                             }
-                            placeholder="Monthly price"
+                            placeholder={t("monthlyPrice")}
                             className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                           />
                           <label className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100">
-                            <span>{draft.isActive ? "Active" : "Inactive"}</span>
+                            <span>{draft.isActive ? t("active") : t("inactive")}</span>
                             <input
                               type="checkbox"
                               checked={draft.isActive}
@@ -375,21 +374,23 @@ export default function SettingsPage() {
                           </label>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-slate-400">In use by {item.members_count ?? 0} member(s)</span>
+                          <span className="text-xs text-slate-400">
+                            {t("inUseByMembers").replace("{count}", String(item.members_count ?? 0))}
+                          </span>
                           <div className="flex items-center gap-2">
                             <button
                               className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                               onClick={() => saveType(item.id)}
                               disabled={busy}
                             >
-                              {busy ? "Saving..." : "Save"}
+                              {busy ? t("saving") : t("save")}
                             </button>
                             <button
                               className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                               onClick={() => removeType(item)}
                               disabled={busy}
                             >
-                              Delete
+                              {t("delete")}
                             </button>
                           </div>
                         </div>
@@ -418,7 +419,7 @@ export default function SettingsPage() {
                         : "border-slate-800 bg-slate-900/60 text-slate-200"
                     }`}
                   >
-                    {value === "dark" ? "Dark" : "Dim"}
+                    {value === "dark" ? t("dark") : t("dim")}
                   </button>
                 ))}
               </div>
@@ -440,7 +441,7 @@ export default function SettingsPage() {
                   <code className="text-emerald-200">supabase db push</code>
                 </p>
                 <p className="text-xs text-slate-400">
-                  (These commands are informational only; run them in your terminal.)
+                  {t("infoCommandsOnly")}
                 </p>
               </div>
             </section>
@@ -449,7 +450,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-white">{t("language")}</p>
-                  <p className="text-xs text-slate-400">{t("themePref")}</p>
+                  <p className="text-xs text-slate-400">{t("language")}</p>
                 </div>
               </div>
               <div className="flex gap-3">

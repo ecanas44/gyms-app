@@ -16,6 +16,7 @@ import { Waiver } from "../../services/waivers";
 import { createCheckin } from "../../services/checkins";
 import { fetchMembershipTypes } from "../../services/membership-types";
 import type { MembershipTypeRecord } from "../../lib/membership-types";
+import { useI18n } from "../providers";
 
 function membershipBadge(name: string): string {
   const normalized = name.toLowerCase();
@@ -28,15 +29,8 @@ function isPunchCardLike(name: string | undefined): boolean {
   return !!name && name.toLowerCase().includes("punch");
 }
 
-const drawerLinks: { label: string; href?: string }[] = [
-  { label: "Overview", href: "/" },
-  { label: "Waivers", href: "/waivers" },
-  { label: "Members", href: "/members" },
-  { label: "Check-ins", href: "/checkins" },
-  { label: "Settings" },
-];
-
 export default function MembersPage() {
+  const { t } = useI18n();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [members, setMembers] = useState<MemberRecord[]>([]);
   const [waivers, setWaivers] = useState<Waiver[]>([]);
@@ -68,13 +62,13 @@ export default function MembersPage() {
         setWaivers(waiverData);
         setMembershipTypes(membershipTypeData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load members");
+        setError(err instanceof Error ? err.message : t("failedLoadMembers"));
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [t]);
 
   const filteredMembers = useMemo(() => {
     const term = search.toLowerCase();
@@ -120,11 +114,11 @@ export default function MembersPage() {
   const saveMember = async () => {
     if (!form) return;
     if (!form.waiver_id) {
-      setError("A waiver is required before adding a member.");
+      setError(t("waiverRequired"));
       return;
     }
     if (!form.membership_type_id) {
-      setError("A membership type is required before adding a member.");
+      setError(t("membershipTypeRequired"));
       return;
     }
     try {
@@ -147,7 +141,7 @@ export default function MembersPage() {
       }
       setForm(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save member");
+      setError(err instanceof Error ? err.message : t("failedSaveMember"));
     }
   };
 
@@ -158,7 +152,7 @@ export default function MembersPage() {
       setMembers((prev) => prev.filter((m) => m.id !== id));
       if (form?.id === id) setForm(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete member");
+      setError(err instanceof Error ? err.message : t("failedDeleteMember"));
     }
   };
 
@@ -167,7 +161,7 @@ export default function MembersPage() {
       setError(null);
       await createCheckin({ member_id: member.id, waiver_id: member.waiver_id });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create check-in");
+      setError(err instanceof Error ? err.message : t("failedCreateCheckin"));
     }
   };
 
@@ -198,7 +192,13 @@ export default function MembersPage() {
           </button>
         </div>
         <div className="mt-8 space-y-1">
-          {drawerLinks.map((item) =>
+          {[
+            { label: t("overview"), href: "/" },
+            { label: t("waivers"), href: "/waivers" },
+            { label: t("members"), href: "/members" },
+            { label: t("checkins"), href: "/checkins" },
+            { label: t("settings") },
+          ].map((item) =>
             item.href ? (
               <Link
                 key={item.label}
@@ -237,11 +237,9 @@ export default function MembersPage() {
                 <span className="text-xl">☰</span>
               </button>
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Members
-                </p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t("members")}</p>
                 <h1 className="text-xl font-semibold text-white sm:text-2xl">
-                  Roster & billing
+                  {t("membersRosterBilling")}
                 </h1>
                 {error && (
                   <p className="mt-1 text-xs text-rose-300">{error}</p>
@@ -252,7 +250,7 @@ export default function MembersPage() {
               className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40"
               onClick={startNew}
             >
-              New member
+              {t("addMember")}
             </button>
           </div>
         </header>
@@ -263,38 +261,38 @@ export default function MembersPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Members
+                    {t("members")}
                   </p>
-                  <h2 className="text-xl font-semibold text-white">Active roster</h2>
+                  <h2 className="text-xl font-semibold text-white">{t("activeRoster")}</h2>
                 </div>
                 <div className="flex gap-2">
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by name, email, or type"
+                    placeholder={t("searchByNameEmailType")}
                     className="w-full min-w-[240px] rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                   />
                   <button
                     className="rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-emerald-500/20"
                     onClick={() => setSearch("")}
                   >
-                    Clear
+                    {t("clear")}
                   </button>
                 </div>
               </div>
 
               <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
                 <div className="grid grid-cols-6 bg-slate-900/70 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  <span>Name</span>
+                  <span>{t("name")}</span>
                   <span>Email</span>
-                  <span>Type</span>
-                  <span>Waiver</span>
-                  <span>Start</span>
-                  <span className="text-right">Actions</span>
+                  <span>{t("type")}</span>
+                  <span>{t("waiver")}</span>
+                  <span>{t("start")}</span>
+                  <span className="text-right">{t("actions")}</span>
                 </div>
                 <div className="divide-y divide-slate-800">
                   {loading ? (
-                    <div className="px-4 py-6 text-sm text-slate-400">Loading members…</div>
+                    <div className="px-4 py-6 text-sm text-slate-400">{t("loadingMembers")}</div>
                   ) : (
                     <>
                       {filteredMembers.map((member) => {
@@ -312,11 +310,11 @@ export default function MembersPage() {
                             </div>
                             <span className="text-slate-300">{member.email}</span>
                             <span
-                              className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${membershipBadge(member.membership_type?.name ?? "Unknown")}`}
+                              className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${membershipBadge(member.membership_type?.name ?? t("unknown"))}`}
                             >
-                              {member.membership_type?.name ?? "Unknown"}
+                              {member.membership_type?.name ?? t("unknown")}
                               {isPunchCardLike(member.membership_type?.name) && member.punches_remaining != null
-                                ? ` · ${member.punches_remaining} left`
+                                ? ` · ${t("punchesLeft").replace("{count}", String(member.punches_remaining))}`
                                 : ""}
                             </span>
                             <span className="text-slate-300">
@@ -330,19 +328,19 @@ export default function MembersPage() {
                               className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-emerald-500/20"
                               onClick={() => editMember(member)}
                             >
-                              Edit
+                              {t("edit")}
                             </button>
                             <button
                               className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/20"
                               onClick={() => removeMember(member.id)}
                             >
-                              Delete
+                              {t("delete")}
                             </button>
                             <button
                               className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-500/30"
                               onClick={() => checkInMember(member)}
                             >
-                              Check-in
+                              {t("checkin")}
                             </button>
                           </div>
                         </div>
@@ -350,7 +348,7 @@ export default function MembersPage() {
                     })}
                       {filteredMembers.length === 0 && (
                         <div className="px-4 py-6 text-sm text-slate-400">
-                          No members match your search.
+                          {t("noMembersMatchSearch")}
                         </div>
                       )}
                     </>
@@ -363,28 +361,28 @@ export default function MembersPage() {
               <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-white">
-                    {form ? (form.id ? "Update member" : "Add member") : "Add or edit"}
+                    {form ? (form.id ? t("updateMember") : t("addMember")) : t("addOrEditMember")}
                   </p>
                   {form && (
                     <button
                       className="text-xs text-slate-400 underline"
                       onClick={() => setForm(null)}
                     >
-                      Cancel
+                      {t("cancel")}
                     </button>
                   )}
                 </div>
                 {form ? (
                   <div className="mt-4 space-y-3 text-sm text-slate-100">
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400">Full name</label>
+                      <label className="text-xs text-slate-400">{t("fullName")}</label>
                       <input
                         value={form.full_name}
                         onChange={(e) =>
                           setForm((prev) => (prev ? { ...prev, full_name: e.target.value } : prev))
                         }
                         className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
-                        placeholder="Member name"
+                        placeholder={t("memberNamePlaceholder")}
                       />
                     </div>
                     <div className="space-y-1">
@@ -399,7 +397,7 @@ export default function MembersPage() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400">Phone</label>
+                      <label className="text-xs text-slate-400">{t("phone")}</label>
                       <input
                         value={form.phone}
                         onChange={(e) =>
@@ -411,7 +409,7 @@ export default function MembersPage() {
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1">
-                        <label className="text-xs text-slate-400">Waiver</label>
+                        <label className="text-xs text-slate-400">{t("waiver")}</label>
                         <select
                           value={form.waiver_id}
                           onChange={(e) =>
@@ -429,7 +427,7 @@ export default function MembersPage() {
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-slate-400">Type</label>
+                        <label className="text-xs text-slate-400">{t("type")}</label>
                         <select
                           value={form.membership_type_id}
                           onChange={(e) =>
@@ -444,7 +442,7 @@ export default function MembersPage() {
                           {membershipTypes.map((type) => (
                             <option key={type.id} value={type.id}>
                               {type.name}
-                              {!type.is_active ? " (Inactive)" : ""}
+                              {!type.is_active ? ` (${t("inactive")})` : ""}
                             </option>
                           ))}
                         </select>
@@ -452,7 +450,7 @@ export default function MembersPage() {
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1">
-                        <label className="text-xs text-slate-400">Start date</label>
+                        <label className="text-xs text-slate-400">{t("startDate")}</label>
                         <input
                           type="date"
                           value={form.start_date}
@@ -468,7 +466,7 @@ export default function MembersPage() {
                         membershipTypes.find((type) => type.id === form.membership_type_id)?.name,
                       ) && (
                         <div className="space-y-1">
-                          <label className="text-xs text-slate-400">Punches remaining</label>
+                          <label className="text-xs text-slate-400">{t("punchesRemaining")}</label>
                           <input
                             type="number"
                             min={0}
@@ -487,40 +485,40 @@ export default function MembersPage() {
                     </div>
                     <div className="flex items-center justify-between pt-2">
                       <span className="text-xs text-slate-400">
-                        Member ID {form.id ?? "(new)"} · Waiver required
+                        {t("memberIdWaiverRequired").replace("{id}", form.id ?? "(new)")}
                       </span>
                       <button
                         className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40"
                         onClick={saveMember}
                         disabled={!form.waiver_id || !form.membership_type_id}
                       >
-                        {form.id ? "Update member" : "Save member"}
+                        {form.id ? t("updateMember") : t("saveMember")}
                       </button>
                     </div>
                     {membershipTypes.length === 0 && (
                       <p className="text-xs text-amber-300">
-                        Add a membership type in Settings before creating members.
+                        {t("addMembershipTypeInSettings")}
                       </p>
                     )}
                   </div>
                 ) : (
                   <div className="mt-4 space-y-3 text-sm text-slate-400">
-                    <p>Select a member to edit, or add a new one.</p>
+                    <p>{t("selectMemberToEdit")}</p>
                     <button
                       className="rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-emerald-500/20"
                       onClick={startNew}
                       disabled={waivers.length === 0 || membershipTypes.length === 0}
                     >
-                      New member
+                      {t("addMember")}
                     </button>
                     {waivers.length === 0 && (
                       <p className="text-xs text-amber-300">
-                        Add a waiver first—members must be linked to a waiver.
+                        {t("addWaiverFirst")}
                       </p>
                     )}
                     {membershipTypes.length === 0 && (
                       <p className="text-xs text-amber-300">
-                        Add a membership type first in Settings.
+                        {t("addMembershipTypeFirst")}
                       </p>
                     )}
                   </div>

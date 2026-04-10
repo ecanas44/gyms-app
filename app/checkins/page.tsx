@@ -8,16 +8,10 @@ import { fetchMembers } from "../../services/members";
 import { fetchWaivers } from "../../services/waivers";
 import { MemberRecord } from "../../lib/members";
 import { Waiver } from "../../services/waivers";
-
-const drawerLinks: { label: string; href?: string }[] = [
-  { label: "Overview", href: "/" },
-  { label: "Waivers", href: "/waivers" },
-  { label: "Members", href: "/members" },
-  { label: "Check-ins", href: "/checkins" },
-  { label: "Settings" },
-];
+import { useI18n } from "../providers";
 
 export default function CheckinsPage() {
+  const { t } = useI18n();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [checkins, setCheckins] = useState<CheckinRecord[]>([]);
   const [members, setMembers] = useState<MemberRecord[]>([]);
@@ -39,13 +33,13 @@ export default function CheckinsPage() {
         setMembers(ms);
         setWaivers(ws);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load check-ins");
+        setError(err instanceof Error ? err.message : t("failedLoadCheckins"));
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [t]);
 
   const getMember = (id?: string | null) => members.find((m) => m.id === id);
   const getWaiver = (id: string) => waivers.find((w) => w.id === id);
@@ -71,7 +65,7 @@ export default function CheckinsPage() {
       await deleteCheckin(id);
       setCheckins((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete check-in");
+      setError(err instanceof Error ? err.message : t("failedDeleteCheckin"));
     }
   };
 
@@ -102,7 +96,13 @@ export default function CheckinsPage() {
           </button>
         </div>
         <div className="mt-8 space-y-1">
-          {drawerLinks.map((item) =>
+          {[
+            { label: t("overview"), href: "/" },
+            { label: t("waivers"), href: "/waivers" },
+            { label: t("members"), href: "/members" },
+            { label: t("checkins"), href: "/checkins" },
+            { label: t("settings") },
+          ].map((item) =>
             item.href ? (
               <Link
                 key={item.label}
@@ -142,10 +142,10 @@ export default function CheckinsPage() {
               </button>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Check-ins
+                  {t("checkins")}
                 </p>
                 <h1 className="text-xl font-semibold text-white sm:text-2xl">
-                  Recent activity
+                  {t("checkinsRecentActivity")}
                 </h1>
                 {error && <p className="mt-1 text-xs text-rose-300">{error}</p>}
               </div>
@@ -158,37 +158,37 @@ export default function CheckinsPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Check-ins
+                  {t("checkins")}
                 </p>
-                <h2 className="text-xl font-semibold text-white">Most recent first</h2>
+                <h2 className="text-xl font-semibold text-white">{t("mostRecentFirst")}</h2>
               </div>
               <div className="flex gap-2">
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by member, waiver, or source"
+                  placeholder={t("searchByMemberWaiverSource")}
                   className="w-full min-w-[240px] rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                 />
                 <button
                   className="rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-emerald-500/20"
                   onClick={() => setSearch("")}
                 >
-                  Clear
+                  {t("clear")}
                 </button>
               </div>
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
               <div className="grid grid-cols-5 bg-slate-900/70 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                <span>Time</span>
-                <span>Source</span>
-                <span>Name</span>
-                <span>Waiver</span>
-                <span className="text-right">Actions</span>
+                <span>{t("time")}</span>
+                <span>{t("source")}</span>
+                <span>{t("name")}</span>
+                <span>{t("waiver")}</span>
+                <span className="text-right">{t("actions")}</span>
               </div>
               <div className="divide-y divide-slate-800">
                 {loading ? (
-                  <div className="px-4 py-6 text-sm text-slate-400">Loading check-ins…</div>
+                  <div className="px-4 py-6 text-sm text-slate-400">{t("loadingCheckins")}</div>
                 ) : (
                   <>
                     {filtered.map((c) => {
@@ -202,10 +202,10 @@ export default function CheckinsPage() {
                           <span className="text-slate-300">
                             {new Date(c.checked_in_at).toLocaleString()}
                           </span>
-                          <span className="text-slate-200">{c.source === "Member" ? "Member" : "One-day"}</span>
+                          <span className="text-slate-200">{c.source === "Member" ? t("sourceMember") : t("sourceOneDay")}</span>
                           <div className="flex flex-col">
                             <span className="font-semibold text-white">
-                              {member?.full_name ?? waiver?.member_name ?? "Unknown"}
+                              {member?.full_name ?? waiver?.member_name ?? t("unknown")}
                             </span>
                             <span className="text-xs text-slate-400">
                               {member?.email ?? waiver?.member_email ?? "—"}
@@ -217,7 +217,7 @@ export default function CheckinsPage() {
                               className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/20"
                               onClick={() => remove(c.id)}
                             >
-                              Delete
+                              {t("delete")}
                             </button>
                           </div>
                         </div>
@@ -225,7 +225,7 @@ export default function CheckinsPage() {
                     })}
                     {filtered.length === 0 && (
                       <div className="px-4 py-6 text-sm text-slate-400">
-                        No check-ins match your search.
+                        {t("noCheckinsMatchSearch")}
                       </div>
                     )}
                   </>
