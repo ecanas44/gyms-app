@@ -18,15 +18,16 @@ import { fetchMembershipTypes } from "../../services/membership-types";
 import type { MembershipTypeRecord } from "../../lib/membership-types";
 import { useI18n } from "../providers";
 
-function membershipBadge(name: string): string {
-  const normalized = name.toLowerCase();
-  if (normalized.includes("monthly")) return "bg-emerald-500/20 text-emerald-100";
-  if (normalized.includes("punch")) return "bg-cyan-500/20 text-cyan-100";
+function membershipBadge(planType: MembershipTypeRecord["plan_type"] | undefined): string {
+  if (planType === "monthly" || planType === "bimonthly" || planType === "annual") {
+    return "bg-emerald-500/20 text-emerald-100";
+  }
+  if (planType === "punch_card" || planType === "day_pass") return "bg-cyan-500/20 text-cyan-100";
   return "bg-slate-500/20 text-slate-100";
 }
 
-function isPunchCardLike(name: string | undefined): boolean {
-  return !!name && name.toLowerCase().includes("punch");
+function isPunchCardLike(planType: MembershipTypeRecord["plan_type"] | undefined): boolean {
+  return planType === "punch_card";
 }
 
 export default function MembersPage() {
@@ -310,10 +311,10 @@ export default function MembersPage() {
                             </div>
                             <span className="text-slate-300">{member.email}</span>
                             <span
-                              className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${membershipBadge(member.membership_type?.name ?? t("unknown"))}`}
+                              className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${membershipBadge(member.membership_type?.plan_type)}`}
                             >
                               {member.membership_type?.name ?? t("unknown")}
-                              {isPunchCardLike(member.membership_type?.name) && member.punches_remaining != null
+                              {isPunchCardLike(member.membership_type?.plan_type) && member.punches_remaining != null
                                 ? ` · ${t("punchesLeft").replace("{count}", String(member.punches_remaining))}`
                                 : ""}
                             </span>
@@ -463,7 +464,7 @@ export default function MembersPage() {
                         />
                       </div>
                       {isPunchCardLike(
-                        membershipTypes.find((type) => type.id === form.membership_type_id)?.name,
+                        membershipTypes.find((type) => type.id === form.membership_type_id)?.plan_type,
                       ) && (
                         <div className="space-y-1">
                           <label className="text-xs text-slate-400">{t("punchesRemaining")}</label>

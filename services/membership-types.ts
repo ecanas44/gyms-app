@@ -1,8 +1,9 @@
-import type { MembershipTypeRecord } from "../lib/membership-types";
+import type { MembershipTypeRecord, PlanType } from "../lib/membership-types";
 
 export type MembershipTypeInput = {
   name: string;
   price_monthly?: number | null;
+  plan_type?: PlanType;
   is_active?: boolean;
 };
 

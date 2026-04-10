@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     const data = await createMembershipType({
       name: body.name,
       price_monthly: body.price_monthly ?? null,
+      plan_type: body.plan_type ?? "custom",
       is_active: body.is_active ?? true,
     });
     return NextResponse.json(data, { status: 201 });

@@ -4,15 +4,19 @@ export type MembershipTypeRecord = {
   id: string;
   name: string;
   price_monthly: number | null;
+  plan_type: PlanType;
   is_active: boolean;
   created_at: string;
   updated_at: string;
   members_count?: number;
 };
 
+export type PlanType = "monthly" | "punch_card" | "day_pass" | "annual" | "bimonthly" | "custom";
+
 export type MembershipTypePayload = {
   name: string;
   price_monthly?: number | null;
+  plan_type?: PlanType;
   is_active?: boolean;
 };
 
@@ -32,6 +36,15 @@ function normalizePrice(price: number | null | undefined): number | null {
     throw new Error("Price must be a non-negative number");
   }
   return Number(price.toFixed(2));
+}
+
+function normalizePlanType(planType: string | undefined): PlanType {
+  const normalized = (planType ?? "custom").trim().toLowerCase();
+  const supported: PlanType[] = ["monthly", "punch_card", "day_pass", "annual", "bimonthly", "custom"];
+  if (!supported.includes(normalized as PlanType)) {
+    throw new Error("Invalid plan type");
+  }
+  return normalized as PlanType;
 }
 
 function toFriendlyError(error: unknown, fallback: string): Error {
@@ -84,6 +97,7 @@ export async function createMembershipType(payload: MembershipTypePayload): Prom
       .insert({
         name,
         price_monthly: normalizePrice(payload.price_monthly),
+        plan_type: normalizePlanType(payload.plan_type),
         is_active: payload.is_active ?? true,
       })
       .select("*")
@@ -100,7 +114,12 @@ export async function updateMembershipType(
   payload: Partial<MembershipTypePayload>,
 ): Promise<MembershipTypeRecord> {
   ensureAdmin();
-  const updates: { name?: string; price_monthly?: number | null; is_active?: boolean } = {};
+  const updates: {
+    name?: string;
+    price_monthly?: number | null;
+    plan_type?: PlanType;
+    is_active?: boolean;
+  } = {};
 
   if (payload.name !== undefined) {
     const name = normalizeName(payload.name);
@@ -108,6 +127,7 @@ export async function updateMembershipType(
     updates.name = name;
   }
   if (payload.price_monthly !== undefined) updates.price_monthly = normalizePrice(payload.price_monthly);
+  if (payload.plan_type !== undefined) updates.plan_type = normalizePlanType(payload.plan_type);
   if (payload.is_active !== undefined) updates.is_active = payload.is_active;
 
   try {
