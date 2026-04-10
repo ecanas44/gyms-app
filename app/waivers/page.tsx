@@ -42,13 +42,13 @@ export default function WaiversPage() {
         const data = await fetchWaivers();
         setWaivers(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load waivers");
+        setError(err instanceof Error ? err.message : t("failedLoadWaivers"));
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [t]);
 
   const drawerLinks: { label: string; href?: string }[] = useMemo(
     () => [
@@ -122,7 +122,7 @@ export default function WaiversPage() {
         }
         setForm(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to save waiver");
+        setError(err instanceof Error ? err.message : t("failedSaveWaiver"));
       }
     };
 
@@ -137,7 +137,7 @@ const deleteWaiver = (id: string) => {
         setWaivers((prev) => prev.filter((w) => w.id !== id));
         if (form?.id === id) setForm(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to delete waiver");
+        setError(err instanceof Error ? err.message : t("failedDeleteWaiver"));
       }
     };
     performDelete();
@@ -149,7 +149,7 @@ const deleteWaiver = (id: string) => {
         setError(null);
         await createCheckin({ waiver_id: waiver.id, member_id: null });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to create check-in");
+        setError(err instanceof Error ? err.message : t("failedCreateCheckin"));
       }
     };
     perform();
@@ -206,12 +206,12 @@ const deleteWaiver = (id: string) => {
           )}
         </div>
         <div className="mt-10 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-          <p className="text-sm font-semibold text-slate-100">Today&apos;s load</p>
+          <p className="text-sm font-semibold text-slate-100">{t("waiversTodayLoad")}</p>
           <div className="mt-3 h-2 rounded-full bg-slate-800">
             <div className="h-2 w-3/4 rounded-full bg-emerald-400"></div>
           </div>
           <p className="mt-3 text-xs text-slate-400">
-            18 active classes · 124 check-ins
+            {t("activeClassesAndCheckins")}
           </p>
         </div>
       </aside>
@@ -229,17 +229,17 @@ const deleteWaiver = (id: string) => {
               </button>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Waivers
+                  {t("waivers")}
                 </p>
                 <h1 className="text-xl font-semibold text-white sm:text-2xl">
-                  Intake and compliance
+                  {t("intakeCompliance")}
                 </h1>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button className="hidden rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40 sm:inline-flex">
-                New action
-              </button>
+                <button className="hidden rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40 sm:inline-flex">
+                  {t("newAction")}
+                </button>
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 text-sm font-bold text-slate-900">
                 ES
               </div>
@@ -253,10 +253,10 @@ const deleteWaiver = (id: string) => {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Waivers
+                    {t("waivers")}
                   </p>
                   <h2 className="text-xl font-semibold text-white">
-                    Intake and compliance
+                    {t("intakeCompliance")}
                   </h2>
                   {error && (
                     <p className="mt-1 text-xs text-rose-300">
@@ -268,14 +268,14 @@ const deleteWaiver = (id: string) => {
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by name, email, or code"
+                    placeholder={t("searchByNameEmailCode")}
                     className="w-full min-w-[240px] rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                   />
                   <button
                     className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40"
                     onClick={startNewWaiver}
                   >
-                    New waiver
+                    {t("newWaiver")}
                   </button>
                 </div>
               </div>
@@ -287,7 +287,7 @@ const deleteWaiver = (id: string) => {
                     className="rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3"
                   >
                     <p className="text-xs uppercase tracking-wide text-slate-400">
-                      {status}
+                      {status === "Signed" ? t("signed") : status === "Pending" ? t("pending") : t("expired")}
                     </p>
                     <div className="mt-2 flex items-end justify-between">
                       <p className="text-2xl font-semibold text-white">
@@ -296,7 +296,7 @@ const deleteWaiver = (id: string) => {
                       <span
                         className={`rounded-full px-3 py-1 text-[11px] font-semibold ${statusStyles[status]}`}
                       >
-                        {status}
+                        {status === "Signed" ? t("signed") : status === "Pending" ? t("pending") : t("expired")}
                       </span>
                     </div>
                   </div>
@@ -305,15 +305,15 @@ const deleteWaiver = (id: string) => {
 
               <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
                 <div className="grid grid-cols-5 bg-slate-900/70 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  <span>Member</span>
-                  <span>Code</span>
-                  <span>Signed</span>
-                  <span>Status</span>
-                  <span className="text-right">Actions</span>
+                  <span>{t("member")}</span>
+                  <span>{t("code")}</span>
+                  <span>{t("signedOn")}</span>
+                  <span>{t("status")}</span>
+                  <span className="text-right">{t("actions")}</span>
                 </div>
                 <div className="divide-y divide-slate-800">
                   {loading ? (
-                    <div className="px-4 py-6 text-sm text-slate-400">Loading waivers…</div>
+                    <div className="px-4 py-6 text-sm text-slate-400">{t("loadingWaivers")}</div>
                   ) : (
                     <>
                       {filteredWaivers.map((waiver) => (
@@ -332,33 +332,33 @@ const deleteWaiver = (id: string) => {
                           <span
                             className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[waiver.status]}`}
                           >
-                            {waiver.status}
+                            {waiver.status === "Signed" ? t("signed") : waiver.status === "Pending" ? t("pending") : t("expired")}
                           </span>
                           <div className="flex justify-end gap-2">
                         <button
                           className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-emerald-500/20"
                           onClick={() => editWaiver(waiver)}
                         >
-                          Edit
+                          {t("edit")}
                         </button>
                         <button
                           className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/20"
                           onClick={() => deleteWaiver(waiver.id)}
                         >
-                          Delete
+                          {t("delete")}
                         </button>
                         <button
                           className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-500/30"
                           onClick={() => checkInFromWaiver(waiver)}
                         >
-                          Check-in
+                          {t("checkin")}
                         </button>
                       </div>
                     </div>
                   ))}
                       {filteredWaivers.length === 0 && (
                         <div className="px-4 py-6 text-sm text-slate-400">
-                          No waivers match your search.
+                          {t("noWaiversMatchSearch")}
                         </div>
                       )}
                     </>
@@ -369,12 +369,12 @@ const deleteWaiver = (id: string) => {
 
             <section className="space-y-4">
               <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-                <p className="text-sm font-semibold text-white">Capture checklist</p>
+                <p className="text-sm font-semibold text-white">{t("captureChecklist")}</p>
                 <div className="mt-3 space-y-2 text-sm text-slate-100">
                   {[
-                    "Collect signature + timestamp",
-                    "Store PDF with member record",
-                    "Flag expired waivers at check-in",
+                    t("collectSignatureTimestamp"),
+                    t("storePdfWithMember"),
+                    t("flagExpiredAtCheckin"),
                   ].map((item) => (
                     <div key={item} className="flex items-center gap-3">
                       <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
@@ -387,21 +387,21 @@ const deleteWaiver = (id: string) => {
               <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-white">
-                    {form ? (form.id ? "Update waiver" : "Add waiver") : "Add or edit"}
+                    {form ? (form.id ? t("updateWaiver") : t("newWaiver")) : t("addOrEdit")}
                   </p>
                   {form && (
                     <button
                       className="text-xs text-slate-400 underline"
                       onClick={() => setForm(null)}
                     >
-                      Cancel
+                      {t("cancel")}
                     </button>
                   )}
                 </div>
                 {form ? (
                   <div className="mt-4 space-y-3 text-sm text-slate-100">
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400">Code (optional)</label>
+                      <label className="text-xs text-slate-400">{t("codeOptional")}</label>
                       <input
                         value={form.code ?? ""}
                         onChange={(e) =>
@@ -414,7 +414,7 @@ const deleteWaiver = (id: string) => {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400">Member</label>
+                      <label className="text-xs text-slate-400">{t("member")}</label>
                       <input
                         value={form.member_name}
                         onChange={(e) =>
@@ -423,7 +423,7 @@ const deleteWaiver = (id: string) => {
                           )
                         }
                         className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
-                        placeholder="Full name"
+                        placeholder={t("fullName")}
                       />
                     </div>
                     <div className="space-y-1">
@@ -441,7 +441,7 @@ const deleteWaiver = (id: string) => {
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1">
-                        <label className="text-xs text-slate-400">Signed date</label>
+                        <label className="text-xs text-slate-400">{t("signedDate")}</label>
                         <input
                           type="date"
                           value={form.signed_at}
@@ -454,7 +454,7 @@ const deleteWaiver = (id: string) => {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-xs text-slate-400">Status</label>
+                        <label className="text-xs text-slate-400">{t("status")}</label>
                         <select
                           value={form.status}
                           onChange={(e) =>
@@ -468,7 +468,9 @@ const deleteWaiver = (id: string) => {
                         >
                           {(["Signed", "Pending", "Expired"] as WaiverStatus[]).map(
                             (status) => (
-                              <option key={status}>{status}</option>
+                              <option key={status}>
+                                {status === "Signed" ? t("signed") : status === "Pending" ? t("pending") : t("expired")}
+                              </option>
                             ),
                           )}
                         </select>
@@ -476,24 +478,24 @@ const deleteWaiver = (id: string) => {
                     </div>
                     <div className="flex items-center justify-between pt-2">
                       <span className="text-xs text-slate-400">
-                        Code {form.code ?? "(auto)"}
+                        {t("codeAuto").replace("{code}", form.code ?? "(auto)")}
                       </span>
                       <button
                         className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40"
                         onClick={saveWaiver}
                       >
-                        {form.id ? "Update waiver" : "Save waiver"}
+                        {form.id ? t("updateWaiver") : t("saveWaiver")}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="mt-4 space-y-3 text-sm text-slate-400">
-                    <p>Select a waiver to edit, or add a new one.</p>
+                    <p>{t("selectWaiverToEdit")}</p>
                     <button
                       className="rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-emerald-500/20"
                       onClick={startNewWaiver}
                     >
-                      New waiver
+                      {t("newWaiver")}
                     </button>
                   </div>
                 )}

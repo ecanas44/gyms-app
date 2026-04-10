@@ -38,13 +38,13 @@ export default function OverviewPage() {
         setWaivers(w);
         setCheckins(c);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load overview data");
+        setError(err instanceof Error ? err.message : t("loadingData"));
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [t]);
 
   const drawerLinks: { label: string; href?: string }[] = useMemo(
     () => [
@@ -247,7 +247,7 @@ export default function OverviewPage() {
                           <span
                             className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[w.status]}`}
                           >
-                            {w.status}
+                            {w.status === "Signed" ? t("signed") : w.status === "Pending" ? t("pending") : t("expired")}
                           </span>
                         </div>
                       ))}
@@ -283,7 +283,7 @@ export default function OverviewPage() {
                         >
                           <div className="flex flex-col">
                             <span className="font-semibold text-white">
-                              {member?.full_name ?? waiver?.member_name ?? "Unknown"}
+                              {member?.full_name ?? waiver?.member_name ?? t("unknown")}
                             </span>
                             <span className="text-xs text-slate-400">
                               {new Date(c.checked_in_at).toLocaleString()}
@@ -329,7 +329,7 @@ export default function OverviewPage() {
                             <span className="text-xs text-slate-400">{m.email}</span>
                           </div>
                         </div>
-                        <span className="text-xs text-slate-300">{m.membership_type?.name ?? "Unknown"}</span>
+                        <span className="text-xs text-slate-300">{m.membership_type?.name ?? t("unknown")}</span>
                       </div>
                     ))}
                     {members.length === 0 && (
