@@ -35,6 +35,37 @@ export async function listCheckins(): Promise<CheckinRecord[]> {
 
 export async function createCheckin(payload: CheckinPayload): Promise<CheckinRecord> {
   ensureAdmin();
+
+  if (payload.member_id) {
+    const { data: memberData, error: memberError } = await supabaseAdmin!
+      .from("members")
+      .select("id, membership_type:membership_types!members_membership_type_id_fkey(name)")
+      .eq("id", payload.member_id)
+      .single();
+    if (memberError) throw memberError;
+
+    const membershipName = (memberData as { membership_type?: { name?: string } | null })
+      .membership_type?.name;
+    const isPunchCard = membershipName?.toLowerCase().includes("punch") ?? false;
+
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
+
+    const { count, error: duplicateError } = await supabaseAdmin!
+      .from(table)
+      .select("id", { count: "exact", head: true })
+      .eq("member_id", payload.member_id)
+      .gte("checked_in_at", todayStart.toISOString())
+      .lt("checked_in_at", tomorrowStart.toISOString());
+    if (duplicateError) throw duplicateError;
+
+    if (!isPunchCard && (count ?? 0) > 0) {
+      throw new Error("Member already checked in today.");
+    }
+  }
+
   const { data, error } = await supabaseAdmin!
     .from(table)
     .insert({

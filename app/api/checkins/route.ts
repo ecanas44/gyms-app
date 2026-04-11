@@ -22,6 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error("Failed to create check-in", error);
-    return NextResponse.json({ error: "Failed to create check-in" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to create check-in";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
