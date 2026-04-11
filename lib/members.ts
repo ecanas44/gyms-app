@@ -39,11 +39,15 @@ function ensureAdmin() {
   if (!supabaseAdmin) throw new Error("Supabase admin client not configured");
 }
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 function normalizeMemberPayload(payload: MemberPayload | Partial<MemberPayload>) {
   const normalized: Partial<MemberPayload> = { ...payload };
 
   if (payload.full_name !== undefined) normalized.full_name = payload.full_name.trim();
-  if (payload.email !== undefined) normalized.email = payload.email.trim().toLowerCase();
+  if (payload.email !== undefined) normalized.email = normalizeEmail(payload.email);
   if (payload.phone !== undefined) normalized.phone = payload.phone?.trim() || null;
   if (payload.start_date !== undefined) normalized.start_date = payload.start_date;
   if (payload.punches_remaining !== undefined) {
@@ -94,6 +98,22 @@ function toFriendlyError(error: unknown, fallback: string): Error {
   return new Error(maybe?.message || fallback);
 }
 
+async function ensureWaiverMatchesMemberEmail(waiverId: string, memberEmail: string): Promise<void> {
+  ensureAdmin();
+  const { data, error } = await supabaseAdmin!
+    .from("waivers")
+    .select("member_email")
+    .eq("id", waiverId)
+    .single();
+  if (error || !data) throw new Error("Waiver is invalid.");
+
+  const waiverEmail = normalizeEmail(data.member_email);
+  const normalizedMemberEmail = normalizeEmail(memberEmail);
+  if (waiverEmail !== normalizedMemberEmail) {
+    throw new Error("Waiver email must match member email.");
+  }
+}
+
 export async function listMembers(): Promise<MemberRecord[]> {
   ensureAdmin();
   const { data, error } = await supabaseAdmin!
@@ -121,6 +141,7 @@ export async function createMember(payload: MemberPayload): Promise<MemberRecord
 
   try {
     const normalizedPayload = normalizeMemberPayload(payload) as MemberPayload;
+    await ensureWaiverMatchesMemberEmail(normalizedPayload.waiver_id, normalizedPayload.email);
     const { data, error } = await supabaseAdmin!
       .from(table)
       .insert(normalizedPayload)
@@ -139,6 +160,20 @@ export async function updateMember(id: string, payload: Partial<MemberPayload>):
 
   try {
     const normalizedPayload = normalizeMemberPayload(payload);
+    if (normalizedPayload.waiver_id !== undefined || normalizedPayload.email !== undefined) {
+      const { data: existingMember, error: existingError } = await supabaseAdmin!
+        .from(table)
+        .select("waiver_id, email")
+        .eq("id", id)
+        .single();
+      if (existingError || !existingMember) throw new Error("Member not found.");
+
+      await ensureWaiverMatchesMemberEmail(
+        normalizedPayload.waiver_id ?? existingMember.waiver_id,
+        normalizedPayload.email ?? existingMember.email,
+      );
+    }
+
     const { data, error } = await supabaseAdmin!
       .from(table)
       .update(normalizedPayload)
