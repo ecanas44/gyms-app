@@ -8,6 +8,16 @@ export type CheckinInput = {
 
 const baseUrl = "/api/checkins";
 
+async function parseError(res: Response, fallback: string): Promise<Error> {
+  try {
+    const body = (await res.json()) as { error?: string };
+    if (body?.error) return new Error(body.error);
+  } catch {
+    // Ignore JSON parsing errors and return fallback.
+  }
+  return new Error(fallback);
+}
+
 export async function fetchCheckins(): Promise<CheckinRecord[]> {
   const res = await fetch(baseUrl, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to load check-ins");
@@ -20,7 +30,7 @@ export async function createCheckin(input: CheckinInput): Promise<CheckinRecord>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error("Failed to create check-in");
+  if (!res.ok) throw await parseError(res, "Failed to create check-in");
   return res.json();
 }
 

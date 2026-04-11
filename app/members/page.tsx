@@ -13,9 +13,10 @@ import {
 } from "../../services/members";
 import { fetchWaivers } from "../../services/waivers";
 import { Waiver } from "../../services/waivers";
-import { createCheckin } from "../../services/checkins";
+import { createCheckin, fetchCheckins } from "../../services/checkins";
 import { fetchMembershipTypes } from "../../services/membership-types";
 import type { MembershipTypeRecord } from "../../lib/membership-types";
+import type { CheckinRecord } from "../../lib/checkins";
 import { useI18n } from "../providers";
 
 function membershipBadge(name: string): string {
@@ -35,9 +36,11 @@ export default function MembersPage() {
   const [members, setMembers] = useState<MemberRecord[]>([]);
   const [waivers, setWaivers] = useState<Waiver[]>([]);
   const [membershipTypes, setMembershipTypes] = useState<MembershipTypeRecord[]>([]);
+  const [checkins, setCheckins] = useState<CheckinRecord[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [checkinBusyMemberId, setCheckinBusyMemberId] = useState<string | null>(null);
   const [form, setForm] = useState<{
     id?: string;
     waiver_id: string;
@@ -53,14 +56,16 @@ export default function MembersPage() {
     const load = async () => {
       try {
         setLoading(true);
-        const [memberData, waiverData, membershipTypeData] = await Promise.all([
+        const [memberData, waiverData, membershipTypeData, checkinData] = await Promise.all([
           fetchMembers(),
           fetchWaivers(),
           fetchMembershipTypes(),
+          fetchCheckins(),
         ]);
         setMembers(memberData);
         setWaivers(waiverData);
         setMembershipTypes(membershipTypeData);
+        setCheckins(checkinData);
       } catch (err) {
         setError(err instanceof Error ? err.message : t("failedLoadMembers"));
       } finally {
@@ -84,6 +89,17 @@ export default function MembersPage() {
     () => membershipTypes.filter((type) => type.is_active),
     [membershipTypes],
   );
+
+  const checkedInTodayByMember = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const ids = new Set<string>();
+    for (const checkin of checkins) {
+      if (!checkin.member_id) continue;
+      if (checkin.checked_in_at.slice(0, 10) !== today) continue;
+      ids.add(checkin.member_id);
+    }
+    return ids;
+  }, [checkins]);
 
   const startNew = () => {
     const defaultTypeId = selectableMembershipTypes[0]?.id ?? membershipTypes[0]?.id ?? "";
@@ -157,11 +173,23 @@ export default function MembersPage() {
   };
 
   const checkInMember = async (member: MemberRecord) => {
+    const isPunchCard = isPunchCardLike(member.membership_type?.name);
+    const alreadyCheckedInToday = checkedInTodayByMember.has(member.id);
+    if (alreadyCheckedInToday && !isPunchCard) return;
+    if (alreadyCheckedInToday && isPunchCard) {
+      const confirmed = window.confirm(t("punchcardRepeatCheckinWarning"));
+      if (!confirmed) return;
+    }
+
     try {
+      setCheckinBusyMemberId(member.id);
       setError(null);
-      await createCheckin({ member_id: member.id, waiver_id: member.waiver_id });
+      const created = await createCheckin({ member_id: member.id, waiver_id: member.waiver_id });
+      setCheckins((prev) => [created, ...prev]);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("failedCreateCheckin"));
+    } finally {
+      setCheckinBusyMemberId((current) => (current === member.id ? null : current));
     }
   };
 
@@ -297,6 +325,10 @@ export default function MembersPage() {
                     <>
                       {filteredMembers.map((member) => {
                         const waiver = waivers.find((w) => w.id === member.waiver_id);
+                        const isPunchCard = isPunchCardLike(member.membership_type?.name);
+                        const alreadyCheckedInToday = checkedInTodayByMember.has(member.id);
+                        const disableCheckin =
+                          checkinBusyMemberId === member.id || (!isPunchCard && alreadyCheckedInToday);
                         return (
                           <div
                             key={member.id}
@@ -337,10 +369,15 @@ export default function MembersPage() {
                               {t("delete")}
                             </button>
                             <button
-                              className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-500/30"
+                              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                                disableCheckin
+                                  ? "cursor-not-allowed bg-slate-700/70 text-slate-300"
+                                  : "bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30"
+                              }`}
                               onClick={() => checkInMember(member)}
+                              disabled={disableCheckin}
                             >
-                              {t("checkin")}
+                              {!isPunchCard && alreadyCheckedInToday ? t("checkedInToday") : t("checkin")}
                             </button>
                           </div>
                         </div>

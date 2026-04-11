@@ -145,6 +145,9 @@ const translations: Record<Lang, Record<string, string>> = {
     punchesLeft: "{count} left",
     edit: "Edit",
     checkin: "Check-in",
+    checkedInToday: "Checked in today",
+    punchcardRepeatCheckinWarning:
+      "This member already checked in today. Continue only with management approval (companion entry).",
     noMembersMatchSearch: "No members match your search.",
     updateMember: "Update member",
     addOrEditMember: "Add or edit",
@@ -287,6 +290,9 @@ const translations: Record<Lang, Record<string, string>> = {
     punchesLeft: "{count} restantes",
     edit: "Editar",
     checkin: "Entrada",
+    checkedInToday: "Entrada de hoy registrada",
+    punchcardRepeatCheckinWarning:
+      "Este miembro ya registró entrada hoy. Continúa solo con aprobación de gerencia (entrada con acompañante).",
     noMembersMatchSearch: "Ningún miembro coincide con tu búsqueda.",
     updateMember: "Actualizar miembro",
     addOrEditMember: "Agregar o editar",
