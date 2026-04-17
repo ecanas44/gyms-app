@@ -198,7 +198,7 @@ export default function MembersPage() {
             { label: t("waivers"), href: "/waivers" },
             { label: t("members"), href: "/members" },
             { label: t("checkins"), href: "/checkins" },
-            { label: t("settings") },
+            { label: t("settings"), href: "/settings" },
           ].map((item) =>
             item.href ? (
               <Link
