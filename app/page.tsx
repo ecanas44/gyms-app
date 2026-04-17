@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/app/providers";
 import { fetchMembers } from "@/services/members";
-import { fetchWaivers } from "@/services/waivers";
+import { createWaiver, fetchWaivers } from "@/services/waivers";
 import { fetchCheckins } from "@/services/checkins";
 import type { MemberRecord } from "@/lib/members";
 import type { Waiver } from "@/services/waivers";
@@ -24,6 +24,14 @@ export default function OverviewPage() {
   const [checkins, setCheckins] = useState<CheckinRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [newWaiverOpen, setNewWaiverOpen] = useState(false);
+  const [savingWaiver, setSavingWaiver] = useState(false);
+  const [newWaiverForm, setNewWaiverForm] = useState({
+    member_name: "",
+    member_email: "",
+    signed_at: new Date().toISOString().slice(0, 10),
+    status: "Pending" as Waiver["status"],
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -74,6 +82,44 @@ export default function OverviewPage() {
     { label: t("totalWaivers"), value: waivers.length.toString() },
     { label: t("checkins24h"), value: checkins.slice(0, 100).length.toString() },
   ];
+
+  const openNewWaiverForm = () => {
+    setNewWaiverForm({
+      member_name: "",
+      member_email: "",
+      signed_at: new Date().toISOString().slice(0, 10),
+      status: "Pending",
+    });
+    setNewWaiverOpen(true);
+  };
+
+  const closeNewWaiverForm = () => {
+    if (savingWaiver) return;
+    setNewWaiverOpen(false);
+  };
+
+  const submitNewWaiver = async () => {
+    if (!newWaiverForm.member_name.trim() || !newWaiverForm.member_email.trim()) {
+      setError("Member name and email are required");
+      return;
+    }
+    try {
+      setSavingWaiver(true);
+      setError(null);
+      const created = await createWaiver({
+        member_name: newWaiverForm.member_name.trim(),
+        member_email: newWaiverForm.member_email.trim(),
+        signed_at: newWaiverForm.signed_at,
+        status: newWaiverForm.status,
+      });
+      setWaivers((prev) => [created, ...prev]);
+      setNewWaiverOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create waiver");
+    } finally {
+      setSavingWaiver(false);
+    }
+  };
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-50">
@@ -186,12 +232,20 @@ export default function OverviewPage() {
                         {t("statusAtGlance")}
                       </h2>
                     </div>
-                    <Link
-                      href="/waivers"
-                      className="text-sm font-semibold text-emerald-300 underline"
-                    >
-                      {t("viewWaivers")}
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href="/waivers"
+                        className="text-sm font-semibold text-emerald-300 underline"
+                      >
+                        {t("viewWaivers")}
+                      </Link>
+                      <button
+                        onClick={openNewWaiverForm}
+                        className="rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40"
+                      >
+                        {t("newWaiver")}
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-3">
                     {(["Signed", "Pending", "Expired"] as Waiver["status"][]).map((status) => (
@@ -342,6 +396,100 @@ export default function OverviewPage() {
           )}
         </main>
       </div>
+
+      {newWaiverOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">{t("newWaiver")}</h2>
+              <button
+                onClick={closeNewWaiverForm}
+                className="rounded-full p-2 text-slate-300 transition hover:bg-slate-800"
+                aria-label="Close new waiver form"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-400">{t("member")}</label>
+                <input
+                  value={newWaiverForm.member_name}
+                  onChange={(e) =>
+                    setNewWaiverForm((prev) => ({ ...prev, member_name: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                  placeholder="Full name"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-400">Email</label>
+                <input
+                  type="email"
+                  value={newWaiverForm.member_email}
+                  onChange={(e) =>
+                    setNewWaiverForm((prev) => ({ ...prev, member_email: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                  placeholder="email@example.com"
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400">{t("signedOn")}</label>
+                  <input
+                    type="date"
+                    value={newWaiverForm.signed_at}
+                    onChange={(e) =>
+                      setNewWaiverForm((prev) => ({ ...prev, signed_at: e.target.value }))
+                    }
+                    className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400">{t("statusAtGlance").split(" ")[0]}</label>
+                  <select
+                    value={newWaiverForm.status}
+                    onChange={(e) =>
+                      setNewWaiverForm((prev) => ({
+                        ...prev,
+                        status: e.target.value as Waiver["status"],
+                      }))
+                    }
+                    className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
+                  >
+                    {(["Signed", "Pending", "Expired"] as Waiver["status"][]).map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={closeNewWaiverForm}
+                className="rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+                disabled={savingWaiver}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitNewWaiver}
+                className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={savingWaiver}
+              >
+                {savingWaiver ? "Saving..." : t("newWaiver")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
