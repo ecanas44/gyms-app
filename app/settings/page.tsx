@@ -9,7 +9,7 @@ import {
   fetchMembershipTypes,
   updateMembershipType,
 } from "../../services/membership-types";
-import type { MembershipTypeRecord } from "../../lib/membership-types";
+import type { MembershipTypeRecord, PlanType } from "../../lib/membership-types";
 
 const PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -17,6 +17,11 @@ const PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
 type MembershipDraft = {
   name: string;
   priceMonthly: string;
+  planType: PlanType;
+  planLabel: string;
+  description: string;
+  durationDays: string;
+  includedPunches: string;
   isActive: boolean;
 };
 
@@ -28,6 +33,16 @@ function toPriceValue(value: string, invalidPriceMessage: string): number | null
     throw new Error(invalidPriceMessage);
   }
   return Number(parsed.toFixed(2));
+}
+
+function toNonNegativeIntegerValue(value: string, invalidMessage: string): number | null {
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(invalidMessage);
+  }
+  return parsed;
 }
 
 export default function SettingsPage() {
@@ -45,6 +60,11 @@ export default function SettingsPage() {
   const [newType, setNewType] = useState<MembershipDraft>({
     name: "",
     priceMonthly: "",
+    planType: "monthly",
+    planLabel: "",
+    description: "",
+    durationDays: "",
+    includedPunches: "",
     isActive: true,
   });
   const [drafts, setDrafts] = useState<Record<string, MembershipDraft>>({});
@@ -79,6 +99,11 @@ export default function SettingsPage() {
         acc[item.id] = {
           name: item.name,
           priceMonthly: item.price_monthly == null ? "" : String(item.price_monthly),
+          planType: item.plan_type ?? "custom",
+          planLabel: item.plan_label ?? "",
+          description: item.description ?? "",
+          durationDays: item.duration_days == null ? "" : String(item.duration_days),
+          includedPunches: item.included_punches == null ? "" : String(item.included_punches),
           isActive: item.is_active,
         };
         return acc;
@@ -112,6 +137,14 @@ export default function SettingsPage() {
         {
           name: newType.name,
           price_monthly: toPriceValue(newType.priceMonthly, t("priceMustBeNonNegative")),
+          plan_type: newType.planType,
+          plan_label: newType.planLabel.trim() || null,
+          description: newType.description.trim() || null,
+          duration_days: toNonNegativeIntegerValue(newType.durationDays, t("durationMustBeNonNegativeInteger")),
+          included_punches: toNonNegativeIntegerValue(
+            newType.includedPunches,
+            t("punchesMustBeNonNegativeInteger"),
+          ),
           is_active: newType.isActive,
         },
         ownerKey.trim() || undefined,
@@ -119,7 +152,16 @@ export default function SettingsPage() {
       const updated = [...membershipTypes, created].sort((a, b) => a.name.localeCompare(b.name));
       setMembershipTypes(updated);
       syncDrafts(updated);
-      setNewType({ name: "", priceMonthly: "", isActive: true });
+      setNewType({
+        name: "",
+        priceMonthly: "",
+        planType: "monthly",
+        planLabel: "",
+        description: "",
+        durationDays: "",
+        includedPunches: "",
+        isActive: true,
+      });
     } catch (error) {
       setMembershipError(error instanceof Error ? error.message : t("failedCreateMembershipType"));
     } finally {
@@ -139,6 +181,14 @@ export default function SettingsPage() {
         {
           name: draft.name,
           price_monthly: toPriceValue(draft.priceMonthly, t("priceMustBeNonNegative")),
+          plan_type: draft.planType,
+          plan_label: draft.planLabel.trim() || null,
+          description: draft.description.trim() || null,
+          duration_days: toNonNegativeIntegerValue(draft.durationDays, t("durationMustBeNonNegativeInteger")),
+          included_punches: toNonNegativeIntegerValue(
+            draft.includedPunches,
+            t("punchesMustBeNonNegativeInteger"),
+          ),
           is_active: draft.isActive,
         },
         ownerKey.trim() || undefined,
@@ -280,7 +330,7 @@ export default function SettingsPage() {
 
               <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">{t("newMembershipType")}</p>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid gap-2 sm:grid-cols-7">
                   <input
                     value={newType.name}
                     onChange={(event) =>
@@ -297,6 +347,44 @@ export default function SettingsPage() {
                     placeholder={t("monthlyPriceOptional")}
                     className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                   />
+                  <select
+                    value={newType.planType}
+                    onChange={(event) =>
+                      setNewType((prev) => ({ ...prev, planType: event.target.value as PlanType }))
+                    }
+                    className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
+                  >
+                    <option value="monthly">{t("planTypeMonthly")}</option>
+                    <option value="punch_card">{t("planTypePunchCard")}</option>
+                    <option value="day_pass">{t("planTypeDayPass")}</option>
+                    <option value="annual">{t("planTypeAnnual")}</option>
+                    <option value="bimonthly">{t("planTypeBimonthly")}</option>
+                    <option value="custom">{t("planTypeCustom")}</option>
+                  </select>
+                  <input
+                    value={newType.planLabel}
+                    onChange={(event) =>
+                      setNewType((prev) => ({ ...prev, planLabel: event.target.value }))
+                    }
+                    placeholder={t("planTypeLabelOptional")}
+                    className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                  />
+                  <input
+                    value={newType.durationDays}
+                    onChange={(event) =>
+                      setNewType((prev) => ({ ...prev, durationDays: event.target.value }))
+                    }
+                    placeholder={t("durationDaysOptional")}
+                    className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                  />
+                  <input
+                    value={newType.includedPunches}
+                    onChange={(event) =>
+                      setNewType((prev) => ({ ...prev, includedPunches: event.target.value }))
+                    }
+                    placeholder={t("includedPunchesOptional")}
+                    className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                  />
                   <label className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100">
                     <span>{t("active")}</span>
                     <input
@@ -308,6 +396,14 @@ export default function SettingsPage() {
                     />
                   </label>
                 </div>
+                <input
+                  value={newType.description}
+                  onChange={(event) =>
+                    setNewType((prev) => ({ ...prev, description: event.target.value }))
+                  }
+                  placeholder={t("planDescriptionOptional")}
+                  className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                />
                 <div className="flex justify-end">
                   <button
                     className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
@@ -337,7 +433,7 @@ export default function SettingsPage() {
                         key={item.id}
                         className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/70 p-3"
                       >
-                        <div className="grid gap-2 sm:grid-cols-3">
+                        <div className="grid gap-2 sm:grid-cols-7">
                           <input
                             value={draft.name}
                             onChange={(event) =>
@@ -359,6 +455,56 @@ export default function SettingsPage() {
                             placeholder={t("monthlyPrice")}
                             className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                           />
+                          <select
+                            value={draft.planType}
+                            onChange={(event) =>
+                              setDrafts((prev) => ({
+                                ...prev,
+                                [item.id]: { ...prev[item.id], planType: event.target.value as PlanType },
+                              }))
+                            }
+                            className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
+                          >
+                            <option value="monthly">{t("planTypeMonthly")}</option>
+                            <option value="punch_card">{t("planTypePunchCard")}</option>
+                            <option value="day_pass">{t("planTypeDayPass")}</option>
+                            <option value="annual">{t("planTypeAnnual")}</option>
+                            <option value="bimonthly">{t("planTypeBimonthly")}</option>
+                            <option value="custom">{t("planTypeCustom")}</option>
+                          </select>
+                          <input
+                            value={draft.planLabel}
+                            onChange={(event) =>
+                              setDrafts((prev) => ({
+                                ...prev,
+                                [item.id]: { ...prev[item.id], planLabel: event.target.value },
+                              }))
+                            }
+                            placeholder={t("planTypeLabelOptional")}
+                            className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                          />
+                          <input
+                            value={draft.durationDays}
+                            onChange={(event) =>
+                              setDrafts((prev) => ({
+                                ...prev,
+                                [item.id]: { ...prev[item.id], durationDays: event.target.value },
+                              }))
+                            }
+                            placeholder={t("durationDays")}
+                            className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                          />
+                          <input
+                            value={draft.includedPunches}
+                            onChange={(event) =>
+                              setDrafts((prev) => ({
+                                ...prev,
+                                [item.id]: { ...prev[item.id], includedPunches: event.target.value },
+                              }))
+                            }
+                            placeholder={t("includedPunches")}
+                            className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                          />
                           <label className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100">
                             <span>{draft.isActive ? t("active") : t("inactive")}</span>
                             <input
@@ -373,6 +519,17 @@ export default function SettingsPage() {
                             />
                           </label>
                         </div>
+                        <input
+                          value={draft.description}
+                          onChange={(event) =>
+                            setDrafts((prev) => ({
+                              ...prev,
+                              [item.id]: { ...prev[item.id], description: event.target.value },
+                            }))
+                          }
+                          placeholder={t("planDescriptionOptional")}
+                          className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                        />
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-slate-400">
                             {t("inUseByMembers").replace("{count}", String(item.members_count ?? 0))}
