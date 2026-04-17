@@ -5,6 +5,9 @@ export type MembershipTypeRecord = {
   name: string;
   price_monthly: number | null;
   plan_type: PlanType;
+  description: string | null;
+  duration_days: number | null;
+  included_punches: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -17,6 +20,9 @@ export type MembershipTypePayload = {
   name: string;
   price_monthly?: number | null;
   plan_type?: PlanType;
+  description?: string | null;
+  duration_days?: number | null;
+  included_punches?: number | null;
   is_active?: boolean;
 };
 
@@ -45,6 +51,20 @@ function normalizePlanType(planType: string | undefined): PlanType {
     throw new Error("Invalid plan type");
   }
   return normalized as PlanType;
+}
+
+function normalizeOptionalText(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeNonNegativeInteger(value: number | null | undefined, field: string): number | null {
+  if (value == null) return null;
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${field} must be a non-negative integer`);
+  }
+  return value;
 }
 
 function toFriendlyError(error: unknown, fallback: string): Error {
@@ -98,6 +118,9 @@ export async function createMembershipType(payload: MembershipTypePayload): Prom
         name,
         price_monthly: normalizePrice(payload.price_monthly),
         plan_type: normalizePlanType(payload.plan_type),
+        description: normalizeOptionalText(payload.description),
+        duration_days: normalizeNonNegativeInteger(payload.duration_days, "Duration days"),
+        included_punches: normalizeNonNegativeInteger(payload.included_punches, "Included punches"),
         is_active: payload.is_active ?? true,
       })
       .select("*")
@@ -118,6 +141,9 @@ export async function updateMembershipType(
     name?: string;
     price_monthly?: number | null;
     plan_type?: PlanType;
+    description?: string | null;
+    duration_days?: number | null;
+    included_punches?: number | null;
     is_active?: boolean;
   } = {};
 
@@ -128,6 +154,13 @@ export async function updateMembershipType(
   }
   if (payload.price_monthly !== undefined) updates.price_monthly = normalizePrice(payload.price_monthly);
   if (payload.plan_type !== undefined) updates.plan_type = normalizePlanType(payload.plan_type);
+  if (payload.description !== undefined) updates.description = normalizeOptionalText(payload.description);
+  if (payload.duration_days !== undefined) {
+    updates.duration_days = normalizeNonNegativeInteger(payload.duration_days, "Duration days");
+  }
+  if (payload.included_punches !== undefined) {
+    updates.included_punches = normalizeNonNegativeInteger(payload.included_punches, "Included punches");
+  }
   if (payload.is_active !== undefined) updates.is_active = payload.is_active;
 
   try {

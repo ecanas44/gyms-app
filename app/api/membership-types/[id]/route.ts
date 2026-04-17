@@ -13,6 +13,9 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
       name: body.name,
       price_monthly: body.price_monthly,
       plan_type: body.plan_type,
+      description: body.description,
+      duration_days: body.duration_days,
+      included_punches: body.included_punches,
       is_active: body.is_active,
     });
     return NextResponse.json(data);

@@ -4,6 +4,9 @@ export type MembershipTypeInput = {
   name: string;
   price_monthly?: number | null;
   plan_type?: PlanType;
+  description?: string | null;
+  duration_days?: number | null;
+  included_punches?: number | null;
   is_active?: boolean;
 };
 

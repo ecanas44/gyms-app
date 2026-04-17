@@ -22,6 +22,9 @@ export async function POST(request: NextRequest) {
       name: body.name,
       price_monthly: body.price_monthly ?? null,
       plan_type: body.plan_type ?? "custom",
+      description: body.description ?? null,
+      duration_days: body.duration_days ?? null,
+      included_punches: body.included_punches ?? null,
       is_active: body.is_active ?? true,
     });
     return NextResponse.json(data, { status: 201 });
