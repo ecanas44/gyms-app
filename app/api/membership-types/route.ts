@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       name: body.name,
       price_monthly: body.price_monthly ?? null,
       plan_type: body.plan_type ?? "custom",
+      plan_label: body.plan_label ?? null,
       description: body.description ?? null,
       duration_days: body.duration_days ?? null,
       included_punches: body.included_punches ?? null,

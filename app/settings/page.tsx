@@ -18,6 +18,7 @@ type MembershipDraft = {
   name: string;
   priceMonthly: string;
   planType: PlanType;
+  planLabel: string;
   description: string;
   durationDays: string;
   includedPunches: string;
@@ -60,6 +61,7 @@ export default function SettingsPage() {
     name: "",
     priceMonthly: "",
     planType: "monthly",
+    planLabel: "",
     description: "",
     durationDays: "",
     includedPunches: "",
@@ -98,6 +100,7 @@ export default function SettingsPage() {
           name: item.name,
           priceMonthly: item.price_monthly == null ? "" : String(item.price_monthly),
           planType: item.plan_type ?? "custom",
+          planLabel: item.plan_label ?? "",
           description: item.description ?? "",
           durationDays: item.duration_days == null ? "" : String(item.duration_days),
           includedPunches: item.included_punches == null ? "" : String(item.included_punches),
@@ -135,6 +138,7 @@ export default function SettingsPage() {
           name: newType.name,
           price_monthly: toPriceValue(newType.priceMonthly, t("priceMustBeNonNegative")),
           plan_type: newType.planType,
+          plan_label: newType.planLabel.trim() || null,
           description: newType.description.trim() || null,
           duration_days: toNonNegativeIntegerValue(newType.durationDays, t("durationMustBeNonNegativeInteger")),
           included_punches: toNonNegativeIntegerValue(
@@ -152,6 +156,7 @@ export default function SettingsPage() {
         name: "",
         priceMonthly: "",
         planType: "monthly",
+        planLabel: "",
         description: "",
         durationDays: "",
         includedPunches: "",
@@ -177,6 +182,7 @@ export default function SettingsPage() {
           name: draft.name,
           price_monthly: toPriceValue(draft.priceMonthly, t("priceMustBeNonNegative")),
           plan_type: draft.planType,
+          plan_label: draft.planLabel.trim() || null,
           description: draft.description.trim() || null,
           duration_days: toNonNegativeIntegerValue(draft.durationDays, t("durationMustBeNonNegativeInteger")),
           included_punches: toNonNegativeIntegerValue(
@@ -324,7 +330,7 @@ export default function SettingsPage() {
 
               <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">{t("newMembershipType")}</p>
-                <div className="grid gap-2 sm:grid-cols-6">
+                <div className="grid gap-2 sm:grid-cols-7">
                   <input
                     value={newType.name}
                     onChange={(event) =>
@@ -355,6 +361,14 @@ export default function SettingsPage() {
                     <option value="bimonthly">{t("planTypeBimonthly")}</option>
                     <option value="custom">{t("planTypeCustom")}</option>
                   </select>
+                  <input
+                    value={newType.planLabel}
+                    onChange={(event) =>
+                      setNewType((prev) => ({ ...prev, planLabel: event.target.value }))
+                    }
+                    placeholder={t("planTypeLabelOptional")}
+                    className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                  />
                   <input
                     value={newType.durationDays}
                     onChange={(event) =>
@@ -419,7 +433,7 @@ export default function SettingsPage() {
                         key={item.id}
                         className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/70 p-3"
                       >
-                        <div className="grid gap-2 sm:grid-cols-6">
+                        <div className="grid gap-2 sm:grid-cols-7">
                           <input
                             value={draft.name}
                             onChange={(event) =>
@@ -458,6 +472,17 @@ export default function SettingsPage() {
                             <option value="bimonthly">{t("planTypeBimonthly")}</option>
                             <option value="custom">{t("planTypeCustom")}</option>
                           </select>
+                          <input
+                            value={draft.planLabel}
+                            onChange={(event) =>
+                              setDrafts((prev) => ({
+                                ...prev,
+                                [item.id]: { ...prev[item.id], planLabel: event.target.value },
+                              }))
+                            }
+                            placeholder={t("planTypeLabelOptional")}
+                            className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                          />
                           <input
                             value={draft.durationDays}
                             onChange={(event) =>

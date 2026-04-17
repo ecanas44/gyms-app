@@ -5,6 +5,7 @@ export type MembershipTypeRecord = {
   name: string;
   price_monthly: number | null;
   plan_type: PlanType;
+  plan_label: string | null;
   description: string | null;
   duration_days: number | null;
   included_punches: number | null;
@@ -20,6 +21,7 @@ export type MembershipTypePayload = {
   name: string;
   price_monthly?: number | null;
   plan_type?: PlanType;
+  plan_label?: string | null;
   description?: string | null;
   duration_days?: number | null;
   included_punches?: number | null;
@@ -118,6 +120,7 @@ export async function createMembershipType(payload: MembershipTypePayload): Prom
         name,
         price_monthly: normalizePrice(payload.price_monthly),
         plan_type: normalizePlanType(payload.plan_type),
+        plan_label: normalizeOptionalText(payload.plan_label),
         description: normalizeOptionalText(payload.description),
         duration_days: normalizeNonNegativeInteger(payload.duration_days, "Duration days"),
         included_punches: normalizeNonNegativeInteger(payload.included_punches, "Included punches"),
@@ -141,6 +144,7 @@ export async function updateMembershipType(
     name?: string;
     price_monthly?: number | null;
     plan_type?: PlanType;
+    plan_label?: string | null;
     description?: string | null;
     duration_days?: number | null;
     included_punches?: number | null;
@@ -154,6 +158,7 @@ export async function updateMembershipType(
   }
   if (payload.price_monthly !== undefined) updates.price_monthly = normalizePrice(payload.price_monthly);
   if (payload.plan_type !== undefined) updates.plan_type = normalizePlanType(payload.plan_type);
+  if (payload.plan_label !== undefined) updates.plan_label = normalizeOptionalText(payload.plan_label);
   if (payload.description !== undefined) updates.description = normalizeOptionalText(payload.description);
   if (payload.duration_days !== undefined) {
     updates.duration_days = normalizeNonNegativeInteger(payload.duration_days, "Duration days");

@@ -13,6 +13,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
       name: body.name,
       price_monthly: body.price_monthly,
       plan_type: body.plan_type,
+      plan_label: body.plan_label,
       description: body.description,
       duration_days: body.duration_days,
       included_punches: body.included_punches,
