@@ -17,6 +17,7 @@ const PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
 type MembershipDraft = {
   name: string;
   priceMonthly: string;
+  durationDays: string;
   isActive: boolean;
 };
 
@@ -28,6 +29,16 @@ function toPriceValue(value: string, invalidPriceMessage: string): number | null
     throw new Error(invalidPriceMessage);
   }
   return Number(parsed.toFixed(2));
+}
+
+function toDurationValue(value: string): number | null {
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error("Duration must be a positive whole number of days");
+  }
+  return parsed;
 }
 
 export default function SettingsPage() {
@@ -45,6 +56,7 @@ export default function SettingsPage() {
   const [newType, setNewType] = useState<MembershipDraft>({
     name: "",
     priceMonthly: "",
+    durationDays: "",
     isActive: true,
   });
   const [drafts, setDrafts] = useState<Record<string, MembershipDraft>>({});
@@ -79,6 +91,7 @@ export default function SettingsPage() {
         acc[item.id] = {
           name: item.name,
           priceMonthly: item.price_monthly == null ? "" : String(item.price_monthly),
+          durationDays: item.duration_days == null ? "" : String(item.duration_days),
           isActive: item.is_active,
         };
         return acc;
@@ -112,6 +125,7 @@ export default function SettingsPage() {
         {
           name: newType.name,
           price_monthly: toPriceValue(newType.priceMonthly, t("priceMustBeNonNegative")),
+          duration_days: toDurationValue(newType.durationDays),
           is_active: newType.isActive,
         },
         ownerKey.trim() || undefined,
@@ -119,7 +133,7 @@ export default function SettingsPage() {
       const updated = [...membershipTypes, created].sort((a, b) => a.name.localeCompare(b.name));
       setMembershipTypes(updated);
       syncDrafts(updated);
-      setNewType({ name: "", priceMonthly: "", isActive: true });
+      setNewType({ name: "", priceMonthly: "", durationDays: "", isActive: true });
     } catch (error) {
       setMembershipError(error instanceof Error ? error.message : t("failedCreateMembershipType"));
     } finally {
@@ -139,6 +153,7 @@ export default function SettingsPage() {
         {
           name: draft.name,
           price_monthly: toPriceValue(draft.priceMonthly, t("priceMustBeNonNegative")),
+          duration_days: toDurationValue(draft.durationDays),
           is_active: draft.isActive,
         },
         ownerKey.trim() || undefined,
@@ -280,7 +295,9 @@ export default function SettingsPage() {
 
               <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">{t("newMembershipType")}</p>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid gap-2 sm:grid-cols-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">{t("newMembershipType")}</p>
+                <div className="grid gap-2 sm:grid-cols-4">
                   <input
                     value={newType.name}
                     onChange={(event) =>
@@ -295,6 +312,14 @@ export default function SettingsPage() {
                       setNewType((prev) => ({ ...prev, priceMonthly: event.target.value }))
                     }
                     placeholder={t("monthlyPriceOptional")}
+                    className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                  />
+                  <input
+                    value={newType.durationDays}
+                    onChange={(event) =>
+                      setNewType((prev) => ({ ...prev, durationDays: event.target.value }))
+                    }
+                    placeholder="Renew every N days"
                     className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                   />
                   <label className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100">
@@ -337,7 +362,7 @@ export default function SettingsPage() {
                         key={item.id}
                         className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/70 p-3"
                       >
-                        <div className="grid gap-2 sm:grid-cols-3">
+                        <div className="grid gap-2 sm:grid-cols-4">
                           <input
                             value={draft.name}
                             onChange={(event) =>
@@ -357,6 +382,17 @@ export default function SettingsPage() {
                               }))
                             }
                             placeholder={t("monthlyPrice")}
+                            className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                          />
+                          <input
+                            value={draft.durationDays}
+                            onChange={(event) =>
+                              setDrafts((prev) => ({
+                                ...prev,
+                                [item.id]: { ...prev[item.id], durationDays: event.target.value },
+                              }))
+                            }
+                            placeholder="Renew every N days"
                             className="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
                           />
                           <label className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100">

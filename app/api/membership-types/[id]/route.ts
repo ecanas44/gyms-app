@@ -12,6 +12,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     const data = await updateMembershipType(id, {
       name: body.name,
       price_monthly: body.price_monthly,
+      duration_days: body.duration_days,
       is_active: body.is_active,
     });
     return NextResponse.json(data);

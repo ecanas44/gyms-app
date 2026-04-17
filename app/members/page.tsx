@@ -30,6 +30,29 @@ function isPunchCardLike(name: string | undefined): boolean {
   return !!name && name.toLowerCase().includes("punch");
 }
 
+function renewalDateLabel(member: MemberRecord): string {
+  const renewal = renewalFromStartDate(member.start_date, member.membership_type?.duration_days);
+  return renewal ?? "No renewal";
+}
+
+function renewalFromStartDate(
+  startDate: string,
+  durationDays: number | null | undefined,
+): string | null {
+  if (!durationDays) return null;
+  const [year, month, day] = startDate.split("-").map(Number);
+  if (!year || !month || !day) return "—";
+  const renewalDate = new Date(year, month - 1, day + durationDays);
+  return renewalDate.toLocaleDateString();
+}
+
+const drawerLinks: { label: string; href?: string }[] = [
+  { label: "Overview", href: "/" },
+  { label: "Waivers", href: "/waivers" },
+  { label: "Members", href: "/members" },
+  { label: "Check-ins", href: "/checkins" },
+  { label: "Settings" },
+];
 export default function MembersPage() {
   const { t } = useI18n();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -89,6 +112,9 @@ export default function MembersPage() {
     () => membershipTypes.filter((type) => type.is_active),
     [membershipTypes],
   );
+  const selectedMembershipType = form
+    ? membershipTypes.find((type) => type.id === form.membership_type_id)
+    : null;
 
   const checkedInTodayByMember = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -310,12 +336,13 @@ export default function MembersPage() {
               </div>
 
               <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
-                <div className="grid grid-cols-6 bg-slate-900/70 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <div className="grid grid-cols-7 bg-slate-900/70 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
                   <span>{t("name")}</span>
                   <span>Email</span>
                   <span>{t("type")}</span>
                   <span>{t("waiver")}</span>
                   <span>{t("start")}</span>
+                  <span>Renewal</span>
                   <span className="text-right">{t("actions")}</span>
                 </div>
                 <div className="divide-y divide-slate-800">
@@ -332,7 +359,7 @@ export default function MembersPage() {
                         return (
                           <div
                             key={member.id}
-                            className="grid grid-cols-6 items-center px-4 py-4 text-sm text-slate-100"
+                            className="grid grid-cols-7 items-center px-4 py-4 text-sm text-slate-100"
                           >
                             <div className="flex flex-col">
                               <span className="font-semibold text-white">
@@ -355,6 +382,7 @@ export default function MembersPage() {
                             <span className="text-slate-300">
                               {new Date(member.start_date).toLocaleDateString()}
                             </span>
+                            <span className="text-slate-300">{renewalDateLabel(member)}</span>
                             <div className="flex justify-end gap-2">
                             <button
                               className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-emerald-500/20"
@@ -499,9 +527,7 @@ export default function MembersPage() {
                           className="w-full rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
                         />
                       </div>
-                      {isPunchCardLike(
-                        membershipTypes.find((type) => type.id === form.membership_type_id)?.name,
-                      ) && (
+                      {isPunchCardLike(selectedMembershipType?.name) && (
                         <div className="space-y-1">
                           <label className="text-xs text-slate-400">{t("punchesRemaining")}</label>
                           <input
@@ -520,6 +546,19 @@ export default function MembersPage() {
                         </div>
                       )}
                     </div>
+                    {selectedMembershipType?.duration_days ? (
+                      <p className="text-xs text-slate-400">
+                        Renews on{" "}
+                        {renewalFromStartDate(
+                          form.start_date,
+                          selectedMembershipType.duration_days,
+                        ) ?? "—"}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-slate-400">
+                        This membership type does not auto-renew.
+                      </p>
+                    )}
                     <div className="flex items-center justify-between pt-2">
                       <span className="text-xs text-slate-400">
                         {t("memberIdWaiverRequired").replace("{id}", form.id ?? "(new)")}

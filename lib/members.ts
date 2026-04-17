@@ -4,6 +4,7 @@ export type MemberMembershipType = {
   id: string;
   name: string;
   price_monthly: number | null;
+  duration_days: number | null;
   is_active: boolean;
 };
 
@@ -33,7 +34,7 @@ export type MemberPayload = {
 
 const table = "members";
 const memberSelect =
-  "*, membership_type:membership_types!members_membership_type_id_fkey(id, name, price_monthly, is_active)";
+  "*, membership_type:membership_types!members_membership_type_id_fkey(id, name, price_monthly, duration_days, is_active)";
 
 function ensureAdmin() {
   if (!supabaseAdmin) throw new Error("Supabase admin client not configured");

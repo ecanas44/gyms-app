@@ -3,6 +3,7 @@ import type { MembershipTypeRecord } from "../lib/membership-types";
 export type MembershipTypeInput = {
   name: string;
   price_monthly?: number | null;
+  duration_days?: number | null;
   is_active?: boolean;
 };
 

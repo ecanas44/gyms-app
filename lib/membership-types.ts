@@ -4,6 +4,7 @@ export type MembershipTypeRecord = {
   id: string;
   name: string;
   price_monthly: number | null;
+  duration_days: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -13,6 +14,7 @@ export type MembershipTypeRecord = {
 export type MembershipTypePayload = {
   name: string;
   price_monthly?: number | null;
+  duration_days?: number | null;
   is_active?: boolean;
 };
 
@@ -32,6 +34,14 @@ function normalizePrice(price: number | null | undefined): number | null {
     throw new Error("Price must be a non-negative number");
   }
   return Number(price.toFixed(2));
+}
+
+function normalizeDurationDays(durationDays: number | null | undefined): number | null {
+  if (durationDays == null) return null;
+  if (!Number.isInteger(durationDays) || durationDays <= 0) {
+    throw new Error("Duration must be a positive whole number of days");
+  }
+  return durationDays;
 }
 
 function toFriendlyError(error: unknown, fallback: string): Error {
@@ -84,6 +94,7 @@ export async function createMembershipType(payload: MembershipTypePayload): Prom
       .insert({
         name,
         price_monthly: normalizePrice(payload.price_monthly),
+        duration_days: normalizeDurationDays(payload.duration_days),
         is_active: payload.is_active ?? true,
       })
       .select("*")
@@ -100,7 +111,12 @@ export async function updateMembershipType(
   payload: Partial<MembershipTypePayload>,
 ): Promise<MembershipTypeRecord> {
   ensureAdmin();
-  const updates: { name?: string; price_monthly?: number | null; is_active?: boolean } = {};
+  const updates: {
+    name?: string;
+    price_monthly?: number | null;
+    duration_days?: number | null;
+    is_active?: boolean;
+  } = {};
 
   if (payload.name !== undefined) {
     const name = normalizeName(payload.name);
@@ -108,6 +124,9 @@ export async function updateMembershipType(
     updates.name = name;
   }
   if (payload.price_monthly !== undefined) updates.price_monthly = normalizePrice(payload.price_monthly);
+  if (payload.duration_days !== undefined) {
+    updates.duration_days = normalizeDurationDays(payload.duration_days);
+  }
   if (payload.is_active !== undefined) updates.is_active = payload.is_active;
 
   try {
